@@ -1,0 +1,766 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" data-theme="auto" data-theme-pref="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f5f7f6">
+<title>小豆闯关记 · 游戏设计文档</title>
+<script>
+(function(){
+  var KEY='doc-theme', root=document.documentElement;
+  var mq=window.matchMedia('(prefers-color-scheme: dark)');
+  function pref(){
+    try{ var v=localStorage.getItem(KEY); return (v==='light'||v==='dark')?v:'auto'; }
+    catch(e){ return 'auto'; }
+  }
+  function resolve(p){ return p==='auto' ? (mq.matches?'dark':'light') : p; }
+  function apply(p){
+    var theme=resolve(p);
+    root.setAttribute('data-theme',theme);
+    root.setAttribute('data-theme-pref',p);
+    var m=document.querySelector('meta[name="theme-color"]');
+    if(m) m.setAttribute('content', theme==='dark' ? '#0e1514' : '#f5f7f6');
+    document.dispatchEvent(new CustomEvent('themechange',{detail:{theme:theme,pref:p}}));
+  }
+  window.__theme={
+    getPref:function(){ return pref(); },
+    set:function(p){ try{ localStorage.setItem(KEY,p); }catch(e){} apply(p); }
+  };
+  apply(pref());
+  var onChange=function(){ if(pref()==='auto') apply('auto'); };
+  if(mq.addEventListener){ mq.addEventListener('change',onChange); }
+  else if(mq.addListener){ mq.addListener(onChange); }
+})();
+</script>
+<style>
+:root{
+  --teal:#1f6f63; --teal2:#2ec4b6; --teal-ink:#1f6f63; --teal-deep:#11423b; --on-teal:#ffffff;
+  --orange:#e76f51; --amber:#f4a259; --blue:#4a86c5;
+  --ink:#20292b; --ink2:#5d6b6e;
+  --line:#e3e9e7; --soft-line:#d5e5e1;
+  --bg:#f5f7f6; --card:#ffffff;
+  --soft:#eef5f3; --warn:#fdf1ea; --zebra:#fafcfb;
+  --box-dark-bg:#20292b; --box-dark-ink:#e9efee;
+  --shadow:rgba(32,41,43,.04); --shadow-lg:rgba(32,41,43,.08);
+  --chart-grid:#e3e9e7; --chart-text:#5d6b6e;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --teal:#17554c; --teal2:#2ec4b6;
+  --teal-ink:#5fd6c6; --teal-deep:#8fe6da; --on-teal:#ffffff;
+  --orange:#f28a70; --amber:#f7b779; --blue:#6fa8e0;
+  --ink:#e7eeec; --ink2:#9fb1ac;
+  --line:#26332f; --soft-line:#2e403b;
+  --bg:#0e1514; --card:#151d1c;
+  --soft:#1a2523; --warn:#2a1d17; --zebra:#1a2422;
+  --box-dark-bg:#0b1110; --box-dark-ink:#e7eeec;
+  --shadow:rgba(0,0,0,.35); --shadow-lg:rgba(0,0,0,.5);
+  --chart-grid:#2a3a36; --chart-text:#9fb1ac;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.75 "PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif}
+b{color:var(--teal-deep)}
+/* 侧栏 */
+#sidebar{position:fixed;top:0;left:0;width:276px;height:100vh;overflow-y:auto;
+  background:var(--teal);color:var(--on-teal);padding:18px 12px 44px;z-index:1040}
+#sidebar::-webkit-scrollbar{width:5px}
+#sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:3px}
+.brand{padding:6px 8px 14px;border-bottom:1px solid rgba(255,255,255,.18);margin-bottom:10px}
+.brand-title{font-size:15px;font-weight:800;letter-spacing:.5px;line-height:1.45}
+.brand-sub{font-size:11.5px;opacity:.82;margin-top:4px}
+.theme-btn{display:inline-flex;align-items:center;gap:6px;margin-top:12px;
+  padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.28);
+  background:rgba(255,255,255,.12);color:var(--on-teal);font-size:12px;line-height:1;cursor:pointer;
+  transition:background-color .2s ease,border-color .2s ease}
+.theme-btn:hover{background:rgba(255,255,255,.22)}
+.theme-btn:focus-visible{outline:2px solid var(--teal2);outline-offset:2px}
+.theme-float{display:none}
+.theme-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.theme-btn .i,.theme-btn .t{display:none}
+[data-theme-pref="auto"] .theme-btn .i-auto,[data-theme-pref="auto"] .theme-btn .t-auto,
+[data-theme-pref="light"] .theme-btn .i-light,[data-theme-pref="light"] .theme-btn .t-light,
+[data-theme-pref="dark"] .theme-btn .i-dark,[data-theme-pref="dark"] .theme-btn .t-dark{display:inline-flex}
+.nav-group{font-size:11px;letter-spacing:1.2px;opacity:.72;margin:16px 8px 6px}
+.nav-link{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
+  color:rgba(255,255,255,.86);text-decoration:none;font-size:13.5px;position:relative}
+.nav-link:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav-link.active{background:rgba(255,255,255,.16);color:#fff;font-weight:700}
+.nav-link.active::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;
+  background:var(--teal2);border-radius:2px}
+.nav-link .num{font-size:11px;opacity:.65;font-variant-numeric:tabular-nums;min-width:17px}
+.nav-link:focus-visible{outline:2px solid var(--teal2);outline-offset:-2px}
+/* 主体 */
+main{margin-left:276px;padding:0 18px 64px}
+.wrap{max-width:1280px;margin:0 auto}
+.hero{background:var(--teal);color:var(--on-teal);padding:34px 38px 30px;margin:0 0 22px}
+.hero .tag{display:inline-block;font-size:11.5px;letter-spacing:2px;padding:3px 10px;
+  border-radius:999px;background:rgba(255,255,255,.16);color:var(--on-teal)}
+.hero h1{margin:14px 0 8px;font-size:30px;font-weight:800;letter-spacing:.5px;line-height:1.3}
+.hero .lead{margin:0 0 20px;font-size:14.5px;opacity:.92;max-width:900px;color:var(--on-teal)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.hero .kpi{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
+  border-radius:10px;padding:12px 14px}
+.hero .kpi b{display:block;color:var(--on-teal);font-size:22px;font-weight:800;line-height:1.35}
+.hero .kpi span{font-size:12px;opacity:.86}
+section{background:var(--card);border-radius:14px;padding:22px 26px 24px;margin-bottom:22px;
+  box-shadow:0 1px 2px var(--shadow);scroll-margin-top:16px}
+h2{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:800;
+  color:var(--teal-ink);margin:0 0 14px;line-height:1.4}
+h2 .n{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  width:28px;height:28px;border-radius:6px;background:var(--teal);color:var(--on-teal);
+  font-size:13px;font-weight:700}
+h3{font-size:16.5px;font-weight:700;color:var(--ink);margin:20px 0 8px}
+h4{font-size:14.5px;font-weight:700;color:var(--ink);margin:14px 0 6px}
+p{margin:0 0 10px;color:var(--ink2)}
+ul,ol{margin:0 0 12px;padding-left:20px;color:var(--ink2)}
+li{margin-bottom:5px}
+code{font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:12.5px;
+  background:var(--soft);padding:1px 5px;border-radius:4px;color:var(--teal-deep)}
+table{width:100%;border-collapse:collapse;border:1px solid var(--line);margin:8px 0 16px;font-size:13.5px}
+th{background:var(--soft);color:var(--teal-deep);font-weight:700;text-align:left;
+  padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:top}
+tbody tr:nth-child(even){background:var(--zebra)}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tw{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tw>table{margin:8px 0 16px}
+.box{border-radius:10px;padding:12px 16px;margin:10px 0 14px;font-size:14px}
+.box.key{background:var(--soft);border-left:4px solid var(--teal);color:var(--ink)}
+.box.warn{background:var(--warn);border-left:4px solid var(--orange);color:var(--ink)}
+.box.dark{background:var(--box-dark-bg);color:var(--box-dark-ink);border-left:4px solid var(--amber)}
+.box.dark b{color:var(--amber)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;background:var(--soft);
+  color:var(--teal-ink);border:1px solid var(--soft-line);font-size:12px;margin:0 4px 4px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.stage{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--card)}
+.stage .badge{display:inline-block;font-size:11px;color:var(--on-teal);
+  padding:2px 8px;border-radius:4px;margin-bottom:6px}
+.s1 .badge{background:var(--blue)} .s2 .badge{background:var(--teal)} .s3 .badge{background:var(--orange)}
+.days{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.day{background:var(--soft);border-radius:10px;padding:12px 14px;border:1px solid var(--soft-line)}
+.day b{display:block;color:var(--teal-ink);font-size:13.5px;margin-bottom:4px}
+.day span{font-size:12.5px;color:var(--ink2);display:block}
+.script{border:1px dashed var(--line);border-radius:10px;padding:10px 14px;margin:8px 0;
+  font-size:13.5px;color:var(--ink2)}
+.script b{color:var(--teal-ink)}
+.kpi{background:var(--soft);border-radius:10px;padding:12px 14px}
+.kpi .v{font-size:22px;font-weight:800;color:var(--teal-ink);line-height:1.3}
+.kpi .l{font-size:12px;color:var(--ink2)}
+footer{max-width:1280px;margin:0 auto;padding:6px 4px 0;font-size:12.5px;color:var(--ink2)}
+/* 移动端 */
+#mbtn{display:none;position:fixed;right:16px;bottom:16px;z-index:1041;
+  align-items:center;gap:6px;padding:10px 16px;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);font-size:14px;box-shadow:0 6px 18px var(--shadow-lg);cursor:pointer}
+#backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1039;display:none}
+#backdrop.show{display:block}
+body,section,#sidebar,.box,.day,.pill,.kpi,th,td,.theme-btn,.stage{
+  transition:background-color .22s ease,color .22s ease,border-color .22s ease}
+@media (max-width:991.98px){
+  #sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.show{transform:none}
+  main{margin-left:0}
+  #mbtn{display:inline-flex}
+  .brand .theme-btn{display:none}
+  .theme-float{display:inline-flex}
+  .theme-btn{position:fixed;top:auto;right:16px;bottom:76px;z-index:1041;margin:0;
+    background:var(--card);color:var(--ink);border-color:var(--line);
+    box-shadow:0 4px 16px var(--shadow-lg)}
+  body.nav-open{overflow:hidden}
+  .kpis,.grid{grid-template-columns:1fr}
+  .hero{padding:26px 20px 24px}
+  section{padding:18px 16px 20px}
+  table{font-size:12.5px}
+  .tw table.wide{min-width:720px}
+  th,td{padding:6px 8px}
+}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *{transition:none !important}
+}
+@media print{
+  .theme-btn,#mbtn,#backdrop{display:none !important}
+  #sidebar{display:none}
+  main{margin:0}
+  section{break-inside:avoid;box-shadow:none}
+}
+</style>
+</head>
+<body>
+<div id="backdrop"></div>
+<button id="mbtn" type="button" aria-controls="sidebar" aria-expanded="false">目录</button>
+
+<nav id="sidebar" aria-label="文档目录">
+  <div class="brand">
+    <div class="brand-title">小豆闯关记 · 设计文档</div>
+    <div class="brand-sub">v1.0 · 十关横版闯关 · 2026-11</div>
+    <button class="theme-btn" type="button" data-role="theme"
+            aria-label="切换外观（跟随系统 / 浅色 / 深色）"
+            title="切换外观：跟随系统 → 浅色 → 深色">
+      <span class="i i-auto"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg></span>
+      <span class="i i-light"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg></span>
+      <span class="i i-dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.8 8.8 0 1 0 10.7 10.7z"/></svg></span>
+      <span class="t t-auto">跟随系统</span><span class="t t-light">浅色</span><span class="t t-dark">深色</span>
+    </button>
+  </div>
+
+  <div class="nav-group">一 · 看懂游戏</div>
+  <a class="nav-link" href="#s1"><span class="num">01</span>游戏概览</a>
+  <a class="nav-link" href="#s2"><span class="num">02</span>设计目标与体验支柱</a>
+  <a class="nav-link" href="#s3"><span class="num">03</span>核心循环</a>
+
+  <div class="nav-group">二 · 规则与内容</div>
+  <a class="nav-link" href="#s4"><span class="num">04</span>操作与输入</a>
+  <a class="nav-link" href="#s5"><span class="num">05</span>玩家状态与生存规则</a>
+  <a class="nav-link" href="#s6"><span class="num">06</span>敌人、道具与地形</a>
+
+  <div class="nav-group">三 · 关卡与数值</div>
+  <a class="nav-link" href="#s7"><span class="num">07</span>十关参数表</a>
+  <a class="nav-link" href="#s8"><span class="num">08</span>关卡设计意图与节奏</a>
+  <a class="nav-link" href="#s9"><span class="num">09</span>数值与调参</a>
+
+  <div class="nav-group">四 · 表现与工程</div>
+  <a class="nav-link" href="#s10"><span class="num">10</span>表现层：美术与音效</a>
+  <a class="nav-link" href="#s11"><span class="num">11</span>UI 流程与状态机</a>
+  <a class="nav-link" href="#s12"><span class="num">12</span>存档与数据</a>
+
+  <div class="nav-group">五 · 收尾</div>
+  <a class="nav-link" href="#s13"><span class="num">13</span>已知问题与迭代建议</a>
+  <a class="nav-link" href="#a1"><span class="num">A1</span>附录：源码地图</a>
+  <a class="nav-link" href="#a2"><span class="num">A2</span>附录：关卡数据字段</a>
+</nav>
+
+<button class="theme-btn theme-float" type="button" data-role="theme"
+            aria-label="切换外观（跟随系统 / 浅色 / 深色）"
+            title="切换外观：跟随系统 → 浅色 → 深色">
+      <span class="i i-auto"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg></span>
+      <span class="i i-light"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg></span>
+      <span class="i i-dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.8 8.8 0 1 0 10.7 10.7z"/></svg></span>
+      <span class="t t-auto">跟随系统</span><span class="t t-light">浅色</span><span class="t t-dark">深色</span>
+    </button>
+
+<main>
+<div class="wrap">
+
+  <header class="hero" id="top">
+    <span class="tag">游戏设计文档 · 横版闯关</span>
+    <h1>小豆闯关记</h1>
+    <p class="lead">十关横版闯关，一个人、一条命三颗心。本文记录现有实现的玩法骨架、关卡内容、数值口径和工程结构，作为后续改关、调难度、加新机制的对照基准。</p>
+    <div class="kpis">
+      <div class="kpi"><b>10 关</b><span>蘑菇草原 → 魔王王座</span></div>
+      <div class="kpi"><b>7 种敌人</b><span>其中 1 种带刺、不能踩</span></div>
+      <div class="kpi"><b>30 星</b><span>每关 3 星，按金币收集率评定</span></div>
+    </div>
+  </header>
+
+  <section id="s1">
+    <h2><span class="n">01</span>游戏概览</h2>
+    <p>《小豆闯关记》是「小豆豆的游戏广场」里的横版闯关项目：10 个关卡线性推进，主角小豆从蘑菇草原一路打到魔王王座。全部玩法写在一个 HTML 文件里，用 Canvas 2D 逐帧手绘，没有外部图片、字体或脚本依赖，双击即开；在广场页里则以全屏舞台加载，外层顶栏负责「返回广场」。</p>
+    <div class="tw"><table>
+      <tbody>
+        <tr><th style="width:130px">文件</th><td><code>小豆闯关记.html</code>，3048 行，单文件自包含</td></tr>
+        <tr><th>技术形态</th><td>原生 JS + Canvas 2D；固定逻辑分辨率 1000×560，按容器比例缩放</td></tr>
+        <tr><th>关卡尺寸</th><td>瓦片 40×40，可见 25 列 × 14 行；单关 96–112 列（3840–4480 px，约 4 屏）</td></tr>
+        <tr><th>操作设备</th><td>键盘（← → / 空格 / X）与触屏虚拟按键</td></tr>
+        <tr><th>单关时长</th><td>熟练 1–2 分钟，首次探索 2–4 分钟</td></tr>
+        <tr><th>目标用户</th><td>8–12 岁儿童与陪玩家长；难度以「能过、但需要试两次」为基准</td></tr>
+        <tr><th>进度保存</th><td>localStorage 三个键：声音、最高分、每关星级</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box key"><b>一句话定位：</b>用十个短关卡把「跑、跳、踩、顶、吃道具、打魔王」六个动作依次教会，再用金币收集率给表现打分。</div>
+  </section>
+
+  <section id="s2">
+    <h2><span class="n">02</span>设计目标与体验支柱</h2>
+    <p>这款游戏不是靠堆敌人数量制造难度，而是靠四条支柱撑起体验，改动任何系统前都应先确认没有破坏它们。</p>
+    <h3>支柱一：跳跃手感优先</h3>
+    <p>手感参数是按「容错」设计的，不是按真实物理。跳跃输入有 0.14 秒缓冲，落地前 0.10 秒仍可起跳（土狼时间）；上升中松开跳跃键会立刻把速度削到 340，实现「短按小跳、长按高跳」。空中转向的加速度给到 1.9 倍，让玩家在半空修正落点。</p>
+    <h3>支柱二：一关一个新机制</h3>
+    <p>十关依次引入：基础跑跳 → 带刺敌人与火焰弹 → 空中跳岛 → 冰面惯性 → 岩浆与魔王 → 脆砖与横向浮板 → 尖刺与弹簧 → 黑暗视野与快速蝙蝠 → 横向风力 → 五血魔王。每个机制都在关卡开场提示里用一句话说明，不靠玩家自己悟。</p>
+    <h3>支柱三：金币就是评分</h3>
+    <p>每关只有一个评级维度：金币收集率。达到 85% 给三星、55% 给两星，其余一星。这让「速通」和「探索」形成取舍——想拿三星就必须绕路去吃高处的金币，而高处往往靠近危险区。</p>
+    <h3>支柱四：死亡代价可控</h3>
+    <p>每关 3 条命，过关后进入下一关补 1 条（上限 5）。死亡只回退到最近的存档点，不整关重来；脆砖在复活时自动复原，避免「死在废墟里」的死锁。</p>
+    <div class="box warn"><b>边界：</b>不做联机、不做随机生成关卡、不做道具背包。关卡是纯静态数据，保证同一关每次打开都完全一致，方便家长和孩子反复练。</div>
+  </section>
+
+  <section id="s3">
+    <h2><span class="n">03</span>核心循环</h2>
+    <p>一关的循环固定为三段：读地形 → 变强 → 交旗。三段之间的时间比例大约是 5 : 2 : 1。</p>
+    <div class="grid">
+      <div class="stage s1">
+        <span class="badge">第一段 · 探索</span>
+        <p>从左往右推进，读三种信息：地面断口（坑）、上方砖块排列（金币与问号砖位置）、敌人站位。玩家此时只有小体型，一次接触就掉命，所以这一段的主要情绪是「小心」。</p>
+      </div>
+      <div class="stage s2">
+        <span class="badge">第二段 · 变强</span>
+        <p>顶到带蘑菇的问号砖变大，多挨一次伤害；顶到带火焰花的问号砖获得射击能力，按 X 发火焰弹。变强之后中段的设计会故意放宽，让玩家享受火力。</p>
+      </div>
+      <div class="stage s3">
+        <span class="badge">第三段 · 交旗</span>
+        <p>碰到旗杆即过关，按金币率结算星级。第 5、10 关的旗子被锁住，必须先打掉魔王（3 血 / 5 血），打完后旗子解锁并弹提示。</p>
+      </div>
+    </div>
+    <h3>一次失败会发生什么</h3>
+    <ol>
+      <li>受伤：有体型时变小并获得 1.8 秒无敌，不掉命。</li>
+      <li>死亡：播放 1.3 秒坠落动画，扣 1 条命。</li>
+      <li>复活：回到已激活的存档点（未激活则回起点），体型重置为小，获得 1.5 秒无敌，脆砖全部复原。</li>
+      <li>命归零：本关结束，展示本关金币数与分数，可「再试一次」或「换一关」。</li>
+    </ol>
+    <p>注意：复活会清空体型，但不会清空已收集的金币——金币按关累计，不会因为死亡而丢失，这是为了让低龄玩家不至于因一次失误丢掉整关的三星。</p>
+  </section>
+
+  <section id="s4">
+    <h2><span class="n">04</span>操作与输入</h2>
+    <div class="tw"><table>
+      <thead><tr><th>输入</th><th>行为</th><th>实现细节</th></tr></thead>
+      <tbody>
+        <tr><td>← →</td><td>左右移动</td><td>最大速度 205 px/s，地面加速度 950，空中 620</td></tr>
+        <tr><td>空格</td><td>跳跃</td><td>初速 545；按住继续上升，松开削到 340</td></tr>
+        <tr><td>X</td><td>发射火焰弹</td><td>仅在火焰形态可用；冷却 0.28 s，同屏上限 3 发</td></tr>
+        <tr><td>Esc</td><td>暂停</td><td>打开暂停面板，清空按键状态防止「卡键」</td></tr>
+        <tr><td>数字 1–9 / 0</td><td>直接选关</td><td>0 映射第 10 关</td></tr>
+        <tr><td>触屏 ◀ ▶ / 跳 / 射</td><td>虚拟按键</td><td>按住即持续触发；无滑动手势，降低误触</td></tr>
+      </tbody>
+    </table></div>
+    <h3>手感参数</h3>
+    <div class="tw"><table>
+      <thead><tr><th>参数</th><th class="num">值</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td>JUMP_BUFFER</td><td class="num">0.14 s</td><td>落地前按下的跳跃会被记住，落地立即起跳</td></tr>
+        <tr><td>COYOTE</td><td class="num">0.10 s</td><td>走出平台边缘后仍可起跳的宽限</td></tr>
+        <tr><td>JUMP_CUT</td><td class="num">340</td><td>松手时把上升速度削到这个值，形成变高跳</td></tr>
+        <tr><td>反向加速倍率</td><td class="num">1.9×</td><td>与前速度反向时加速度放大，转向更跟手</td></tr>
+        <tr><td>SPRING_V</td><td class="num">800</td><td>弹簧踏板弹射速度，约为普通跳跃的 1.47 倍</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box key"><b>设计取舍：</b>没有做「冲刺」和「蹲下」。对目标年龄来说，按键越少越好；速度差异由冰面、风力等关卡机制承担，而不是再加一个按键。</div>
+  </section>
+
+  <section id="s5">
+    <h2><span class="n">05</span>玩家状态与生存规则</h2>
+    <h3>三种体型</h3>
+    <div class="tw"><table>
+      <thead><tr><th>状态</th><th>碰撞盒</th><th>能力</th><th>受伤结果</th></tr></thead>
+      <tbody>
+        <tr><td>small（小豆）</td><td>26 × 38</td><td>跑跳、踩怪、顶砖</td><td>直接死亡</td></tr>
+        <tr><td>big（大蘑菇形态）</td><td>30 × 52</td><td>同上，多一次容错</td><td>变小 + 1.8 s 无敌</td></tr>
+        <tr><td>fire（火焰形态）</td><td>30 × 52</td><td>同上 + X 发火焰弹</td><td>退到 big 逻辑：直接变小</td></tr>
+      </tbody>
+    </table></div>
+    <p>变身时碰撞盒高度变化会把脚底对齐（<code>y -= 新高度 - 旧高度</code>），避免变大时卡进地面或变小后悬空。火焰形态不叠加：吃到火焰花后即使再吃蘑菇也保持 fire。</p>
+    <h3>伤害与生命的顺序</h3>
+    <p>受击判定先查无敌帧，再看体型：有体型 → 变小；小体型 → 死亡。掉进坑（<code>y &gt; 画面高 + 80</code>）和碰到岩浆直接死亡，不看体型，也不走无敌帧——这是唯一能秒杀大形态的规则。</p>
+    <h3>火焰弹</h3>
+    <div class="tw"><table>
+      <thead><tr><th>参数</th><th class="num">值</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>飞行速度</td><td class="num">520 px/s</td><td>直线飞行，不做抛物线</td></tr>
+        <tr><td>存活时间</td><td class="num">0.9 s</td><td>射程约 470 px，接近 12 格</td></tr>
+        <tr><td>发射间隔</td><td class="num">0.28 s</td><td>同屏最多 3 发，防止无脑连射</td></tr>
+        <tr><td>命中效果</td><td class="num">—</td><td>可击杀带刺敌人与空中敌人，也可对魔王造成 1 点伤害</td></tr>
+      </tbody>
+    </table></div>
+    <p>没吃火焰花时按 X 会提示「吃到火焰花才能发射火焰弹哦」，而不是静默无反应——低龄玩家需要明确反馈。</p>
+  </section>
+
+  <section id="s6">
+    <h2><span class="n">06</span>敌人、道具与地形</h2>
+    <h3>敌人表</h3>
+    <div class="tw"><table>
+      <thead><tr><th>类型</th><th>碰撞盒</th><th class="num">速度</th><th class="num">分值</th><th>是否可踩</th><th>行为与破解</th></tr></thead>
+      <tbody>
+        <tr><td>walker 慢慢虫</td><td>30 × 26</td><td class="num">52</td><td class="num">20</td><td>可</td><td>来回巡逻，遇墙与悬崖折返；最基础的教学敌人</td></tr>
+        <tr><td>spiky 刺刺怪</td><td>30 × 26</td><td class="num">58</td><td class="num">25</td><td>不可</td><td>踩上去照样受伤，必须绕开或用火焰弹</td></tr>
+        <tr><td>flyer 飞飞怪</td><td>30 × 26</td><td class="num">66</td><td class="num">25</td><td>可</td><td>无重力，正弦浮动 ±26 px；踩踏判定要求下落速度</td></tr>
+        <tr><td>slider 滑滑怪</td><td>32 × 24</td><td class="num">100</td><td class="num">25</td><td>可</td><td>高速直线冲，来不及踩只能跳开</td></tr>
+        <tr><td>jumper 跳跳怪</td><td>30 × 26</td><td class="num">46</td><td class="num">25</td><td>可</td><td>每 1.2–1.9 秒原地弹跳，落点难预判</td></tr>
+        <tr><td>beetle 铁壳虫</td><td>32 × 24</td><td class="num">96</td><td class="num">30</td><td>可</td><td>高速巡逻，分值最高，常与脆砖组合做连贯跳</td></tr>
+        <tr><td>bat 蝙蝠</td><td>32 × 22</td><td class="num">112</td><td class="num">30</td><td>可</td><td>黑森林专属，±34 px 振幅，速度最快</td></tr>
+      </tbody>
+    </table></div>
+    <p>所有敌人共享三条通用规则：碰到不可穿越瓦片反向、走到悬崖边自动折返（脆砖碎裂算作悬崖）、掉出画面即消失。踩踏判定要求玩家竖直速度大于 120 且脚底与敌人顶部距离小于 24 px——也就是「确实是从上往下落」，避免侧面蹭到就被判定为踩死。</p>
+
+    <h3>道具与地形瓦片</h3>
+    <div class="tw"><table>
+      <thead><tr><th>对象</th><th>触发方式</th><th>效果</th></tr></thead>
+      <tbody>
+        <tr><td>问号砖（q）</td><td>从下往上顶</td><td>吐出预设道具（蘑菇或火焰花）；无道具时给 +10 分并计入金币进度</td></tr>
+        <tr><td>普通砖 / 石砖 / 冰砖</td><td>从下往上顶</td><td>只弹一下，不产出</td></tr>
+        <tr><td>蘑菇</td><td>顶出后追着玩家走</td><td>变大；+30 分</td></tr>
+        <tr><td>火焰花</td><td>顶出后原地不动</td><td>获得射击能力；+30 分</td></tr>
+        <tr><td>金币</td><td>靠近 27 px 内吸附</td><td>+10 分，计入星级分子</td></tr>
+        <tr><td>弹簧踏板</td><td>从上方落下</td><td>以 800 速度弹起，用于越过高墙或吃高空金币</td></tr>
+        <tr><td>尖刺</td><td>碰到底部 24 px</td><td>按普通受伤处理（大形态变小，小形态死亡）</td></tr>
+        <tr><td>脆砖（crumb）</td><td>踩上</td><td>0.45 秒后碎裂，复活时全部复原</td></tr>
+        <tr><td>岩浆</td><td>接触</td><td>立即死亡，无视体型与无敌帧</td></tr>
+        <tr><td>浮板</td><td>站在上面</td><td>随板移动（纵向往返或横向往返，速度 55–70）</td></tr>
+      </tbody>
+    </table></div>
+    <h4>得分表</h4>
+    <div class="tw"><table>
+      <thead><tr><th>行为</th><th class="num">得分</th></tr></thead>
+      <tbody>
+        <tr><td>收集一枚金币</td><td class="num">+10</td></tr>
+        <tr><td>顶出道具</td><td class="num">+30</td></tr>
+        <tr><td>踩死敌人</td><td class="num">+20 ~ +30（按类型）</td></tr>
+        <tr><td>过关</td><td class="num">+100</td></tr>
+        <tr><td>击败魔王</td><td class="num">+300（第 10 关 +500）</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="s7">
+    <h2><span class="n">07</span>十关参数表</h2>
+    <p>下表的列宽、存档点、旗杆位置、金币数与敌人数量全部来自 <code>LEVELS</code> 数据（源码 419–716 行），可直接对照修改。</p>
+    <div class="tw"><table class="wide">
+      <thead><tr>
+        <th class="num">关</th><th>名称</th><th>主题</th><th class="num">列数 · 长度 px</th>
+        <th class="num">存档列</th><th class="num">旗杆</th><th class="num">金币</th><th>敌人</th><th>特色机制</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>蘑菇草原</td><td>grass</td><td class="num">96 · 3840</td><td class="num">48</td><td class="num">89</td><td class="num">26</td><td>7 只 walker</td><td>基础跑跳、问号砖、管道</td></tr>
+        <tr><td class="num">2</td><td>潮湿洞穴</td><td>cave</td><td class="num">100 · 4000</td><td class="num">58</td><td class="num">92</td><td class="num">22</td><td>4 spiky · 2 flyer · 1 walker</td><td>带刺敌人、纵向升降台</td></tr>
+        <tr><td class="num">3</td><td>天空浮岛</td><td>sky</td><td class="num">100 · 4000</td><td class="num">44</td><td class="num">96</td><td class="num">30</td><td>3 walker · 4 flyer</td><td>连续跳岛、无地面区域</td></tr>
+        <tr><td class="num">4</td><td>冰冻雪原</td><td>ice</td><td class="num">100 · 4000</td><td class="num">72</td><td class="num">96</td><td class="num">24</td><td>5 slider · 2 spiky · 1 walker</td><td>低摩擦物理（减速 250 / 加速 430）</td></tr>
+        <tr><td class="num">5</td><td>魔王城堡</td><td>castle</td><td class="num">100 · 4000</td><td class="num">72</td><td class="num">96</td><td class="num">22</td><td>7 只 + 魔王（3 血）</td><td>四段岩浆坑、旗子需先击败魔王</td></tr>
+        <tr><td class="num">6</td><td>沙丘遗迹</td><td>desert</td><td class="num">104 · 4160</td><td class="num">44</td><td class="num">98</td><td class="num">29</td><td>13 只（含 6 beetle）</td><td>脆砖桥、横向浮板</td></tr>
+        <tr><td class="num">7</td><td>熔岩工坊</td><td>forge</td><td class="num">104 · 4160</td><td class="num">56</td><td class="num">99</td><td class="num">27</td><td>11 只（jumper/spiky 为主）</td><td>五段岩浆 + 四组尖刺 + 弹簧踏板</td></tr>
+        <tr><td class="num">8</td><td>夜森林</td><td>forest</td><td class="num">104 · 4160</td><td class="num">50</td><td class="num">100</td><td class="num">27</td><td>6 bat · 2 spiky · 2 beetle · 2 walker</td><td>黑暗视野（仅角色周围一圈亮）</td></tr>
+        <tr><td class="num">9</td><td>黄昏风谷</td><td>dusk</td><td class="num">112 · 4480</td><td class="num">62</td><td class="num">108</td><td class="num">38</td><td>6 flyer · 4 walker · 3 slider</td><td>横向风力 −32 px/s，仅在空中生效</td></tr>
+        <tr><td class="num">10</td><td>魔王王座</td><td>throne</td><td class="num">104 · 4160</td><td class="num">70</td><td class="num">100</td><td class="num">36</td><td>10 只 + 魔王（5 血）</td><td>岩浆、尖刺、弹簧、召唤小怪的终局魔王</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box key"><b>长度规律：</b>第 1 关 96 列起步，第 2–5 关统一 100 列，第 6 关起扩到 104 列，第 9 关拉到 112 列，最后一关回到 104。第 9 关最长，是为了让「风力 + 移动浮板」的段落足够长，能形成持续压力；第 10 关反而收短，避免终局魔王战前消耗过多。</div>
+  </section>
+
+  <section id="s8">
+    <h2><span class="n">08</span>关卡设计意图与节奏</h2>
+    <p>每关开场会在屏幕中央停留 2.85 秒，展示关号、关名与一句提示。提示文案就是这一关的教学目标，写关卡时先定提示，再定地形。</p>
+    <div class="days">
+      <div class="day"><b>第 1 关 · 蘑菇草原</b><span>“踩住小怪、顶问号砖吃蘑菇。”</span><span>教学：移动、跳跃、踩踏、顶砖。全程只有 walker，地面连续、坑宽 3 格，失败成本最低。</span></div>
+      <div class="day"><b>第 2 关 · 潮湿洞穴</b><span>“刺刺怪不能踩！顶出火焰花用火焰弹。”</span><span>教学：识别不可踩敌人、获取并使用远程手段。用升降台把金币吊到高空，教玩家「等板」。</span></div>
+      <div class="day"><b>第 3 关 · 天空浮岛</b><span>“脚下常常是云海！”</span><span>教学：连续跳跃与落点判断。地面只剩首尾两段，中间全靠 4 格宽的砖岛，掉下去即死。</span></div>
+      <div class="day"><b>第 4 关 · 冰冻雪原</b><span>“地上结冰了！跳的时候要提前一点点按。”</span><span>教学：惯性。减速降到 250，玩家必须提前刹车；配合 slider 高速冲撞形成「滑行躲避」。</span></div>
+      <div class="day"><b>第 5 关 · 魔王城堡</b><span>“踩它或打它 3 次，旗子才会打开。”</span><span>首次出现魔王与岩浆。四段 2 格宽岩浆坑要求起跳点精准；魔王 3 血，打完解锁旗子。</span></div>
+      <div class="day"><b>第 6 关 · 沙丘遗迹</b><span>“脆砖踩一下就会塌，要快快跑过去。”</span><span>教学：时间压力。三段脆砖桥脚下一步就塌，必须连续跑跳；中段加横向浮板，练「在移动平台上起跳」。</span></div>
+      <div class="day"><b>第 7 关 · 熔岩工坊</b><span>“地上有尖刺，红色踏板会把你弹上天。”</span><span>教学：垂直节奏。五段岩浆 + 四组尖刺把地面切成碎片，弹簧是唯一稳定越过高墙的手段。</span></div>
+      <div class="day"><b>第 8 关 · 夜森林</b><span>“森林里好黑，只有身边一小圈亮着。”</span><span>教学：信息受限下的预判。视野收窄到角色周围，蝙蝠速度 112，逼迫玩家「听节奏跳」。</span></div>
+      <div class="day"><b>第 9 关 · 黄昏风谷</b><span>“大风会把你往左吹，跳远要多留一点力。”</span><span>教学：外力补偿。空中恒定 −32 的风，向右跳的落点整体左移；两块横向浮板横跨断口。</span></div>
+      <div class="day"><b>第 10 关 · 魔王王座</b><span>“最后的魔王有 5 颗心，还会叫小怪帮忙。”</span><span>终局：岩浆 + 尖刺 + 弹簧全上；魔王 5 血，每 3.6 秒召唤小怪（场上少于 3 只时），血量 ≤2 提速。</span></div>
+    </div>
+    <h3>难度曲线</h3>
+    <p>整体是「台阶式」而不是「斜坡式」：每关引入一个新机制时，前 30% 的路段只放这一种机制的简单版本，中段组合，尾段加一个消耗点（魔王或长跳）。第 4、7、9 关是三个明显的难度台阶——冰面、尖刺+岩浆、风力，都是「同一套操作、不同的物理反馈」，而不是新增按键。</p>
+  </section>
+
+  <section id="s9">
+    <h2><span class="n">09</span>数值与调参</h2>
+    <h3>物理常量</h3>
+    <div class="tw"><table>
+      <thead><tr><th>常量</th><th class="num">值</th><th>在哪里用</th></tr></thead>
+      <tbody>
+        <tr><td>GRAV</td><td class="num">1000</td><td>重力加速度（px/s²）</td></tr>
+        <tr><td>MAX_FALL</td><td class="num">780</td><td>最大下落速度，防止穿透薄平台</td></tr>
+        <tr><td>RUN_MAX</td><td class="num">205</td><td>地面最大水平速度</td></tr>
+        <tr><td>RUN_ACC / RUN_DEC</td><td class="num">950 / 800</td><td>加速与刹车（冰面覆盖为 430 / 250）</td></tr>
+        <tr><td>AIR_ACC</td><td class="num">620</td><td>空中加速度（冰面 420）</td></tr>
+        <tr><td>JUMP_V</td><td class="num">545</td><td>起跳竖直速度，决定跳高（约 2.4 格）</td></tr>
+      </tbody>
+    </table></div>
+    <h3>星级计算</h3>
+    <div class="tw"><table>
+      <thead><tr><th>金币收集率</th><th>星级</th><th>典型关卡所需数量</th></tr></thead>
+      <tbody>
+        <tr><td>≥ 85%</td><td>★★★</td><td>第 1 关 26 枚需 23 枚；第 9 关 38 枚需 33 枚</td></tr>
+        <tr><td>55% – 84%</td><td>★★</td><td>第 1 关 15–22 枚</td></tr>
+        <tr><td>&lt; 55%</td><td>★</td><td>只要过关即保底 1 星</td></tr>
+      </tbody>
+    </table></div>
+    <p>存库时只保留历史最高星级（<code>Math.max</code>），重打低分不会掉星，避免孩子因为复玩掉星而不敢再玩。分母是该关金币总数，但顶空问号砖得到的 +10 也计入分子，所以个别关卡实际收集率可能超过 100%，星级仍按 3 星封顶。</p>
+    <h3>改一个数会发生什么</h3>
+    <div class="tw"><table>
+      <thead><tr><th>想改的体验</th><th>该动哪里</th><th>连带影响</th></tr></thead>
+      <tbody>
+        <tr><td>整体更快</td><td><code>RUN_MAX</code> 205 → 230</td><td>跳跃前冲距离变长，脆砖段落会变简单</td></tr>
+        <tr><td>跳得更高</td><td><code>JUMP_V</code> 545 → 600</td><td>可越过 3 格高墙，第 7 关弹簧段落失去意义</td></tr>
+        <tr><td>更宽容</td><td><code>COYOTE</code> 0.10 → 0.15</td><td>空中连跳更容易，浮岛关三星率上升</td></tr>
+        <tr><td>更难拿三星</td><td><code>starsFor()</code> 阈值 0.85 → 0.92</td><td>第 4、8 关几乎不可能满星（金币在危险区）</td></tr>
+        <tr><td>魔王更耐打</td><td><code>LEVELS[9].boss.hp</code> 5 → 7</td><td>终局时长 +20 秒，需同步检查召唤节奏</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="s10">
+    <h2><span class="n">10</span>表现层：美术与音效</h2>
+    <h3>美术：程序化绘制 + 十套主题</h3>
+    <p>所有角色、瓦片、云、山、城堡都是 Canvas 路径绘制，没有一张贴图。每个关卡用一套主题配色（<code>PAL</code>），只换「地表 / 土体 / 砖 / 石 / 管道」五个色，场景立刻变化，资产成本为零。</p>
+    <div class="tw"><table>
+      <thead><tr><th>主题键</th><th>关卡</th><th>地表主色</th><th>氛围</th></tr></thead>
+      <tbody>
+        <tr><td>grass</td><td>1</td><td>#7ecb5c</td><td>明亮草原，蓝绿天</td></tr>
+        <tr><td>cave</td><td>2</td><td>#7f8f9c</td><td>潮湿洞穴，冷灰石壁</td></tr>
+        <tr><td>sky</td><td>3</td><td>#dff3ff</td><td>高空云海，浅蓝粉砖</td></tr>
+        <tr><td>ice</td><td>4</td><td>#eaf9ff</td><td>冰原，近白高光</td></tr>
+        <tr><td>castle</td><td>5</td><td>#7a635f</td><td>暗红石堡，压暗整体</td></tr>
+        <tr><td>desert</td><td>6</td><td>#e8c26a</td><td>沙丘暖黄，强日照</td></tr>
+        <tr><td>forge</td><td>7</td><td>#5c5350</td><td>熔岩工坊，铁灰+橙点</td></tr>
+        <tr><td>forest</td><td>8</td><td>#5fa36a</td><td>夜森林，深绿+雾</td></tr>
+        <tr><td>dusk</td><td>9</td><td>#e0a15f</td><td>黄昏暖橙，低对比</td></tr>
+        <tr><td>throne</td><td>10</td><td>#6a4a55</td><td>王座暗紫，最强压迫</td></tr>
+      </tbody>
+    </table></div>
+    <p>背景分四层视差：云 0.22、远山 0.28、近山 0.45、地面装饰 0.5–0.6，镜头横移时形成纵深。第 8 关在此基础上叠一层黑色遮罩与径向光圈，光圈半径跟随角色。</p>
+    <h3>反馈：粒子、飘字、震屏</h3>
+    <ul>
+      <li>粒子：吃金币 9 颗、踩怪 10 颗、变身 12 颗、过关 70 颗彩带。</li>
+      <li>飘字：<code>+10</code> / <code>+30</code> / <code>-1</code> / <code>存档！</code>，向上飘并减速。</li>
+      <li>震屏：受伤 6 px / 0.2 s，魔王受击 9 px / 0.25 s，魔王倒下 12 px / 0.5 s。</li>
+    </ul>
+    <h3>音效：全部由 WebAudio 合成</h3>
+    <div class="tw"><table>
+      <thead><tr><th>音名</th><th>合成参数</th><th>触发</th></tr></thead>
+      <tbody>
+        <tr><td>jump</td><td>360→640 Hz，square，0.12 s</td><td>起跳</td></tr>
+        <tr><td>coin</td><td>880→1180→1560 Hz，双段</td><td>吃金币</td></tr>
+        <tr><td>stomp</td><td>300→90 Hz，square</td><td>踩死敌人</td></tr>
+        <tr><td>power</td><td>420→760 再 700→1100 Hz</td><td>吃到蘑菇/火焰花</td></tr>
+        <tr><td>hurt</td><td>520→200 Hz</td><td>受伤变小</td></tr>
+        <tr><td>die</td><td>700→120 Hz，sawtooth，0.55 s</td><td>死亡</td></tr>
+        <tr><td>spring</td><td>240→900 Hz</td><td>弹簧弹射</td></tr>
+        <tr><td>crumble</td><td>160→60 Hz</td><td>脆砖碎裂</td></tr>
+        <tr><td>boss</td><td>160→70 Hz，sawtooth</td><td>魔王受击</td></tr>
+        <tr><td>star / win</td><td>上滑三段 / 四音上行</td><td>三星、过关、全部通关</td></tr>
+      </tbody>
+    </table></div>
+    <p>背景音乐是一段 16 步旋律（<code>[0,2,4,7,4,2,0,-3,0,4,7,9,7,4,0,-5]</code> 半音偏移，基频 330 Hz），每 360 ms 走一步，每 4 步叠一个低八度根音。只在 playing / clear 状态推进，暂停时静默。</p>
+    <div class="box warn"><b>音量：</b>目前只有「开/关」两档，没有滑杆。音效音量在 0.045–0.08 之间，已经压低以避免儿童长时间游玩时过响。</div>
+  </section>
+
+  <section id="s11">
+    <h2><span class="n">11</span>UI 流程与状态机</h2>
+    <p>外层只有两种「屏幕」：开始页与游戏页；游戏中通过状态机切换七个覆盖层面板。</p>
+    <div class="tw"><table>
+      <thead><tr><th>state</th><th>含义</th><th>进入方式</th><th>离开方式</th></tr></thead>
+      <tbody>
+        <tr><td>start</td><td>标题页</td><td>初次加载</td><td>开始游戏 / 选关</td></tr>
+        <tr><td>playing</td><td>正常游戏</td><td>开始、继续、复活</td><td>暂停 / 死亡 / 过关</td></tr>
+        <tr><td>pause</td><td>暂停面板</td><td>Esc 或暂停按钮</td><td>继续 / 重开 / 选关 / 帮助</td></tr>
+        <tr><td>select</td><td>选关网格</td><td>选关按钮</td><td>点关卡或返回</td></tr>
+        <tr><td>dying</td><td>死亡动画</td><td>生命耗尽前的一次死亡</td><td>1.3 s 后自动复活或结束</td></tr>
+        <tr><td>clear</td><td>过关结算</td><td>碰到旗子</td><td>下一关 / 选关</td></tr>
+        <tr><td>over</td><td>生命耗尽</td><td>扣完最后一条命</td><td>再试一次 / 换一关</td></tr>
+        <tr><td>end</td><td>全部通关</td><td>第 10 关结算</td><td>重新开始</td></tr>
+      </tbody>
+    </table></div>
+    <div class="grid">
+      <div class="stage s2">
+        <span class="badge">HUD 常驻</span>
+        <p>左上：生命心、金币 <code>已收/总数</code>、第 N 关与推进条（按玩家 x 与旗杆位置换算百分比）。右上：分数、声音开关、暂停。进度条只在 playing 时更新。</p>
+      </div>
+      <div class="stage s3">
+        <span class="badge">覆盖层</span>
+        <p>开始、选关、暂停、帮助、过关、失败、结局共 7 个。切换时统一隐藏其余面板，避免多层叠加；打开面板会清空方向键状态，防止回来时角色「自己往前跑」。</p>
+      </div>
+    </div>
+    <p>选关网格不设解锁门槛：十关全部可直接进入，星级只记录成绩。这是刻意设计——孩子卡在第 7 关时，可以先跳到第 3 关找回信心，而不是被锁死。</p>
+  </section>
+
+  <section id="s12">
+    <h2><span class="n">12</span>存档与数据</h2>
+    <div class="tw"><table>
+      <thead><tr><th>键</th><th>类型</th><th>内容</th><th>写入时机</th></tr></thead>
+      <tbody>
+        <tr><td><code>xd.sound</code></td><td>字符串</td><td><code>1</code> / <code>0</code></td><td>切换声音开关</td></tr>
+        <tr><td><code>xd.best</code></td><td>字符串数字</td><td>历史最高分</td><td>过关且刷新纪录</td></tr>
+        <tr><td><code>xd.stars</code></td><td>JSON 数组</td><td>10 个 0–3 的整数</td><td>每次过关</td></tr>
+      </tbody>
+    </table></div>
+    <p>读档时会校验数组类型，解析失败直接重置为空表，不会因为一条脏数据导致整个游戏打不开。localStorage 不可用（隐私模式、文件协议受限）时全部静默降级：可以正常玩，只是不记录进度，也不报错。</p>
+    <p>分数在 <code>startLevel</code>（开始、选关、重开）时归零；点「下一关」继续时不清零，所以最高分记录的是「一轮」的最高分——可能跨多关，但不是十关总和，也不是单关成绩。如果以后要做总榜，需要在「从头开始」和「继续」之间明确口径。</p>
+  </section>
+
+  <section id="s13">
+    <h2><span class="n">13</span>已知问题与迭代建议</h2>
+    <div class="tw"><table>
+      <thead><tr><th>问题</th><th>影响</th><th>建议</th></tr></thead>
+      <tbody>
+        <tr><td>关卡数据是手写列坐标</td><td>加一关要手工排 30+ 个砖块与金币，易错位</td><td>抽成独立 JSON，配一个可视化关卡编辑器（拖格子导出）</td></tr>
+        <tr><td>星级只看金币</td><td>高手可以低速刷币拿三星，缺少「打得漂亮」的维度</td><td>增加「无伤」或「通关时间」第二维度，三星要求双条件</td></tr>
+        <tr><td>魔王只有 2 关</td><td>终局内容偏薄，第 5 关魔王与第 10 关打法高度相似</td><td>给第 5 关魔王加「砸地落石」，第 10 关加「三段跳扑」</td></tr>
+        <tr><td>火焰弹同屏 3 发</td><td>对空战几乎无压力，第 9 关飞行敌人可站桩清</td><td>改为按冷却限制而非数量限制，或让 flyer 有闪避</td></tr>
+        <tr><td>最高分口径是「从开始/重开起的一轮分」</td><td>可能跨多关，与单关成绩、十关总分都不等价，玩家不容易理解</td><td>明确为「十关总分」，或在结算页同时显示本关分与累计分</td></tr>
+        <tr><td>音效无滑杆、无音量记忆细分</td><td>只能全开或全关，公共场合不便</td><td>加 0–100 的音量档并记忆</td></tr>
+        <tr><td>触屏无暂停入口</td><td>手机上只能靠 Esc（不存在），必须退回广场</td><td>在触屏 HUD 补一个暂停按钮</td></tr>
+        <tr><td>复活清空体型</td><td>第 8、9 关死后重新找火焰花，节奏被打断</td><td>存档点复活时保留一次体型，或存档点附近固定放一朵火焰花</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box dark"><b>优先级建议：</b>先做「关卡数据外置 + 编辑器」，它决定后面所有内容的产能；再做「星级第二维度」，它决定重玩价值；魔王扩展与触屏暂停可以随版本迭代。</div>
+  </section>
+
+  <section id="a1">
+    <h2><span class="n">A1</span>附录：源码地图</h2>
+    <p>行号对应 <code>小豆闯关记.html</code> 当前版本，改动后可能整体位移，按小节标题检索更稳。</p>
+    <div class="tw"><table>
+      <thead><tr><th>模块</th><th class="num">起始行</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td>常量</td><td class="num">359</td><td>画布 1000×560、瓦片 40、重力、跑跳参数、生命上限</td></tr>
+        <tr><td>主题配色</td><td class="num">373</td><td><code>PAL</code> 十套主题，每套 5 组色</td></tr>
+        <tr><td>关卡数据</td><td class="num">419</td><td><code>LEVELS</code> 十关完整定义</td></tr>
+        <tr><td>存储</td><td class="num">791</td><td>localStorage 读写与降级</td></tr>
+        <tr><td>音效</td><td class="num">836</td><td><code>sfx</code> / BGM 合成</td></tr>
+        <tr><td>敌人配置</td><td class="num">928</td><td><code>ENEMY</code> 七种敌人的尺寸、速度、分值</td></tr>
+        <tr><td>关卡构建</td><td class="num">943</td><td>地面、瓦片、金币、敌人、浮板、魔王的实例化</td></tr>
+        <tr><td>玩家物理</td><td class="num">1111</td><td>移动、跳跃、瓦片碰撞、尖刺、浮板、掉坑</td></tr>
+        <tr><td>道具</td><td class="num">1257</td><td>蘑菇/火焰花的浮出、追人、拾取</td></tr>
+        <tr><td>火焰弹</td><td class="num">1321</td><td>飞行、撞墙、命中敌人</td></tr>
+        <tr><td>敌人 AI</td><td class="num">1370</td><td>巡逻、折返、踩踏判定</td></tr>
+        <tr><td>魔王</td><td class="num">1450</td><td>跳跃移动、召唤、受击、解锁旗子</td></tr>
+        <tr><td>关卡流程</td><td class="num">1560</td><td>死亡、复活、存档点、过关、星级</td></tr>
+        <tr><td>界面</td><td class="num">2756</td><td>HUD 刷新、选关网格、覆盖层</td></tr>
+        <tr><td>输入</td><td class="num">2944</td><td>键盘、触屏、按钮绑定</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="a2">
+    <h2><span class="n">A2</span>附录：关卡数据字段</h2>
+    <div class="tw"><table>
+      <thead><tr><th>字段</th><th>必填</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>name</code> / <code>theme</code></td><td>是</td><td>关名与主题键（须存在于 <code>PAL</code>）</td></tr>
+        <tr><td><code>cols</code></td><td>是</td><td>关卡总列数，长度 = cols × 40 px</td></tr>
+        <tr><td><code>hint</code></td><td>是</td><td>开场提示文案，一关一句话说清新机制</td></tr>
+        <tr><td><code>start</code> / <code>cp</code> / <code>flag</code></td><td>是</td><td>起点、存档点（列+行）、旗杆列</td></tr>
+        <tr><td><code>ground</code></td><td>是</td><td>地面段数组 <code>[[起,止],…]</code>，段间即坑</td></tr>
+        <tr><td><code>tiles</code></td><td>否</td><td><code>[列,行,类型]</code> 或 <code>[列,行,'q','mushroom']</code></td></tr>
+        <tr><td><code>coins</code></td><td>否</td><td><code>[列,行]</code> 数组，决定星级分母</td></tr>
+        <tr><td><code>enemies</code></td><td>否</td><td><code>{t, col, row}</code>，row 缺省为地面行</td></tr>
+        <tr><td><code>lava</code></td><td>否</td><td>岩浆段 <code>[[起,止],…]</code>，接触即死</td></tr>
+        <tr><td><code>platforms</code></td><td>否</td><td>浮板：纵向给 <code>minY/maxY</code>，横向给 <code>axis:'x'</code> 与 <code>minX/maxX</code></td></tr>
+        <tr><td><code>physics</code></td><td>否</td><td>覆盖 <code>accel</code> / <code>dec</code> / <code>airAcc</code>（冰面用）</td></tr>
+        <tr><td><code>wind</code></td><td>否</td><td>空中横向风，正值向右；第 9 关为 −32</td></tr>
+        <tr><td><code>dark</code></td><td>否</td><td>开启黑暗视野遮罩</td></tr>
+        <tr><td><code>boss</code></td><td>否</td><td><code>{col, min, max, hp, final}</code>；存在即锁旗</td></tr>
+      </tbody>
+    </table></div>
+    <p>新增一关的最小步骤：在 <code>LEVELS</code> 末尾加一条数据（含 name/theme/cols/hint/start/cp/flag/ground），必要时在 <code>PAL</code> 加一套主题色，然后刷新页面即可从选关进入。不需要改引擎代码。</p>
+  </section>
+
+</div>
+<footer>小豆豆的游戏广场 · 设计文档系列 · 本文以 <code>小豆闯关记.html</code> v1 实现为准，数值如有调整请同步更新本页。</footer>
+</main>
+
+<script>
+(function(){
+  var sidebar=document.getElementById('sidebar');
+  var links=[].slice.call(sidebar.querySelectorAll('.nav-link'));
+  var secs=links.map(function(a){
+    return document.getElementById(a.getAttribute('href').slice(1));
+  }).filter(Boolean);
+  if(!secs.length) return;
+
+  var last=null, lockUntil=0;
+
+  function mark(id){
+    links.forEach(function(a){
+      var on=a.getAttribute('href')==='#'+id;
+      a.classList.toggle('active',on);
+      if(on){ a.setAttribute('aria-current','true'); } else { a.removeAttribute('aria-current'); }
+    });
+  }
+
+  function current(){
+    var line=window.innerHeight*0.28;
+    var cur=secs[0];
+    for(var i=0;i<secs.length;i++){
+      if(secs[i].getBoundingClientRect().top<=line) cur=secs[i];
+    }
+    var doc=document.documentElement;
+    if(window.innerHeight+window.pageYOffset>=doc.scrollHeight-2) cur=secs[secs.length-1];
+    return cur;
+  }
+
+  function sync(){
+    if(Date.now()<lockUntil) return;
+    var s=current();
+    if(s===last) return;
+    last=s; mark(s.id);
+  }
+
+  var queued=false;
+  function onScroll(){
+    if(queued) return;
+    queued=true;
+    requestAnimationFrame(function(){ sync(); queued=false; });
+  }
+  window.addEventListener('scroll',onScroll,{passive:true});
+  window.addEventListener('resize',onScroll);
+  window.addEventListener('hashchange',function(){
+    var id=location.hash.slice(1);
+    if(document.getElementById(id)){ last=null; mark(id); }
+  });
+  window.addEventListener('load',sync);
+
+  links.forEach(function(a){
+    a.addEventListener('click',function(){
+      var id=a.getAttribute('href').slice(1);
+      last=document.getElementById(id);
+      lockUntil=Date.now()+800;
+      mark(id);
+      if(window.matchMedia('(max-width:991.98px)').matches){
+        sidebar.classList.remove('show');
+        var bd=document.getElementById('backdrop');
+        if(bd) bd.classList.remove('show');
+        document.body.classList.remove('nav-open');
+        var mb=document.getElementById('mbtn');
+        if(mb) mb.setAttribute('aria-expanded','false');
+      }
+    });
+  });
+
+  var initHash=location.hash.slice(1);
+  if(initHash && document.getElementById(initHash)){
+    last=document.getElementById(initHash);
+    mark(initHash);
+  } else {
+    sync();
+  }
+
+  /* 移动端抽屉 */
+  var mbtn=document.getElementById('mbtn');
+  var backdrop=document.getElementById('backdrop');
+  mbtn.addEventListener('click',function(){
+    var open=sidebar.classList.toggle('show');
+    backdrop.classList.toggle('show',open);
+    document.body.classList.toggle('nav-open',open);
+    mbtn.setAttribute('aria-expanded',open?'true':'false');
+  });
+  backdrop.addEventListener('click',function(){
+    sidebar.classList.remove('show');
+    backdrop.classList.remove('show');
+    document.body.classList.remove('nav-open');
+    mbtn.setAttribute('aria-expanded','false');
+  });
+})();
+
+[].slice.call(document.querySelectorAll('[data-role="theme"]')).forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var p=window.__theme.getPref();
+    window.__theme.set(p==='auto'?'light':p==='light'?'dark':'auto');
+  });
+});
+</script>
+</body>
+</html>
+
+
+
+
+
+
+

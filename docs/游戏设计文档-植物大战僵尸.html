@@ -1,0 +1,712 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" data-theme="auto" data-theme-pref="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f5f7f6">
+<title>植物大战僵尸 · 游戏设计文档</title>
+<script>
+(function(){
+  var KEY='doc-theme', root=document.documentElement;
+  var mq=window.matchMedia('(prefers-color-scheme: dark)');
+  function pref(){
+    try{ var v=localStorage.getItem(KEY); return (v==='light'||v==='dark')?v:'auto'; }
+    catch(e){ return 'auto'; }
+  }
+  function resolve(p){ return p==='auto' ? (mq.matches?'dark':'light') : p; }
+  function apply(p){
+    var theme=resolve(p);
+    root.setAttribute('data-theme',theme);
+    root.setAttribute('data-theme-pref',p);
+    var m=document.querySelector('meta[name="theme-color"]');
+    if(m) m.setAttribute('content', theme==='dark' ? '#0e1514' : '#f5f7f6');
+    document.dispatchEvent(new CustomEvent('themechange',{detail:{theme:theme,pref:p}}));
+  }
+  window.__theme={
+    getPref:function(){ return pref(); },
+    set:function(p){ try{ localStorage.setItem(KEY,p); }catch(e){} apply(p); }
+  };
+  apply(pref());
+  var onChange=function(){ if(pref()==='auto') apply('auto'); };
+  if(mq.addEventListener){ mq.addEventListener('change',onChange); }
+  else if(mq.addListener){ mq.addListener(onChange); }
+})();
+</script>
+<style>
+:root{
+  --teal:#1f6f63; --teal2:#2ec4b6; --teal-ink:#1f6f63; --teal-deep:#11423b; --on-teal:#ffffff;
+  --orange:#e76f51; --amber:#f4a259; --blue:#4a86c5;
+  --ink:#20292b; --ink2:#5d6b6e;
+  --line:#e3e9e7; --soft-line:#d5e5e1;
+  --bg:#f5f7f6; --card:#ffffff;
+  --soft:#eef5f3; --warn:#fdf1ea; --zebra:#fafcfb;
+  --box-dark-bg:#20292b; --box-dark-ink:#e9efee;
+  --shadow:rgba(32,41,43,.04); --shadow-lg:rgba(32,41,43,.08);
+  --chart-grid:#e3e9e7; --chart-text:#5d6b6e;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --teal:#17554c; --teal2:#2ec4b6;
+  --teal-ink:#5fd6c6; --teal-deep:#8fe6da; --on-teal:#ffffff;
+  --orange:#f28a70; --amber:#f7b779; --blue:#6fa8e0;
+  --ink:#e7eeec; --ink2:#9fb1ac;
+  --line:#26332f; --soft-line:#2e403b;
+  --bg:#0e1514; --card:#151d1c;
+  --soft:#1a2523; --warn:#2a1d17; --zebra:#1a2422;
+  --box-dark-bg:#0b1110; --box-dark-ink:#e7eeec;
+  --shadow:rgba(0,0,0,.35); --shadow-lg:rgba(0,0,0,.5);
+  --chart-grid:#2a3a36; --chart-text:#9fb1ac;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.75 "PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif}
+b{color:var(--teal-deep)}
+#sidebar{position:fixed;top:0;left:0;width:276px;height:100vh;overflow-y:auto;
+  background:var(--teal);color:var(--on-teal);padding:18px 12px 44px;z-index:1040}
+#sidebar::-webkit-scrollbar{width:5px}
+#sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:3px}
+.brand{padding:6px 8px 14px;border-bottom:1px solid rgba(255,255,255,.18);margin-bottom:10px}
+.brand-title{font-size:15px;font-weight:800;letter-spacing:.5px;line-height:1.45}
+.brand-sub{font-size:11.5px;opacity:.82;margin-top:4px}
+.theme-btn{display:inline-flex;align-items:center;gap:6px;margin-top:12px;
+  padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.28);
+  background:rgba(255,255,255,.12);color:var(--on-teal);font-size:12px;line-height:1;cursor:pointer;
+  transition:background-color .2s ease,border-color .2s ease}
+.theme-btn:hover{background:rgba(255,255,255,.22)}
+.theme-btn:focus-visible{outline:2px solid var(--teal2);outline-offset:2px}
+.theme-float{display:none}
+.theme-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.theme-btn .i,.theme-btn .t{display:none}
+[data-theme-pref="auto"] .theme-btn .i-auto,[data-theme-pref="auto"] .theme-btn .t-auto,
+[data-theme-pref="light"] .theme-btn .i-light,[data-theme-pref="light"] .theme-btn .t-light,
+[data-theme-pref="dark"] .theme-btn .i-dark,[data-theme-pref="dark"] .theme-btn .t-dark{display:inline-flex}
+.nav-group{font-size:11px;letter-spacing:1.2px;opacity:.72;margin:16px 8px 6px}
+.nav-link{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
+  color:rgba(255,255,255,.86);text-decoration:none;font-size:13.5px;position:relative}
+.nav-link:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav-link.active{background:rgba(255,255,255,.16);color:#fff;font-weight:700}
+.nav-link.active::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;
+  background:var(--teal2);border-radius:2px}
+.nav-link .num{font-size:11px;opacity:.65;font-variant-numeric:tabular-nums;min-width:17px}
+.nav-link:focus-visible{outline:2px solid var(--teal2);outline-offset:-2px}
+main{margin-left:276px;padding:0 18px 64px}
+.wrap{max-width:1280px;margin:0 auto}
+.hero{background:var(--teal);color:var(--on-teal);padding:34px 38px 30px;margin:0 0 22px}
+.hero .tag{display:inline-block;font-size:11.5px;letter-spacing:2px;padding:3px 10px;
+  border-radius:999px;background:rgba(255,255,255,.16);color:var(--on-teal)}
+.hero h1{margin:14px 0 8px;font-size:30px;font-weight:800;letter-spacing:.5px;line-height:1.3}
+.hero .lead{margin:0 0 20px;font-size:14.5px;opacity:.92;max-width:900px;color:var(--on-teal)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.hero .kpi{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
+  border-radius:10px;padding:12px 14px}
+.hero .kpi b{display:block;color:var(--on-teal);font-size:22px;font-weight:800;line-height:1.35}
+.hero .kpi span{font-size:12px;opacity:.86}
+section{background:var(--card);border-radius:14px;padding:22px 26px 24px;margin-bottom:22px;
+  box-shadow:0 1px 2px var(--shadow);scroll-margin-top:16px}
+h2{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:800;
+  color:var(--teal-ink);margin:0 0 14px;line-height:1.4}
+h2 .n{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  width:28px;height:28px;border-radius:6px;background:var(--teal);color:var(--on-teal);
+  font-size:13px;font-weight:700}
+h3{font-size:16.5px;font-weight:700;color:var(--ink);margin:20px 0 8px}
+h4{font-size:14.5px;font-weight:700;color:var(--ink);margin:14px 0 6px}
+p{margin:0 0 10px;color:var(--ink2)}
+ul,ol{margin:0 0 12px;padding-left:20px;color:var(--ink2)}
+li{margin-bottom:5px}
+code{font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:12.5px;
+  background:var(--soft);padding:1px 5px;border-radius:4px;color:var(--teal-deep)}
+table{width:100%;border-collapse:collapse;border:1px solid var(--line);margin:8px 0 16px;font-size:13.5px}
+th{background:var(--soft);color:var(--teal-deep);font-weight:700;text-align:left;
+  padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line);color:var(--ink);vertical-align:top}
+tbody tr:nth-child(even){background:var(--zebra)}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tw{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tw>table{margin:8px 0 16px}
+.box{border-radius:10px;padding:12px 16px;margin:10px 0 14px;font-size:14px}
+.box.key{background:var(--soft);border-left:4px solid var(--teal);color:var(--ink)}
+.box.warn{background:var(--warn);border-left:4px solid var(--orange);color:var(--ink)}
+.box.dark{background:var(--box-dark-bg);color:var(--box-dark-ink);border-left:4px solid var(--amber)}
+.box.dark b{color:var(--amber)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;background:var(--soft);
+  color:var(--teal-ink);border:1px solid var(--soft-line);font-size:12px;margin:0 4px 4px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.stage{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--card)}
+.stage .badge{display:inline-block;font-size:11px;color:var(--on-teal);
+  padding:2px 8px;border-radius:4px;margin-bottom:6px}
+.s1 .badge{background:var(--blue)} .s2 .badge{background:var(--teal)} .s3 .badge{background:var(--orange)}
+.days{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.day{background:var(--soft);border-radius:10px;padding:12px 14px;border:1px solid var(--soft-line)}
+.day b{display:block;color:var(--teal-ink);font-size:13.5px;margin-bottom:4px}
+.day span{font-size:12.5px;color:var(--ink2);display:block}
+.script{border:1px dashed var(--line);border-radius:10px;padding:10px 14px;margin:8px 0;
+  font-size:13.5px;color:var(--ink2)}
+.script b{color:var(--teal-ink)}
+.kpi{background:var(--soft);border-radius:10px;padding:12px 14px}
+.kpi .v{font-size:22px;font-weight:800;color:var(--teal-ink);line-height:1.3}
+.kpi .l{font-size:12px;color:var(--ink2)}
+footer{max-width:1280px;margin:0 auto;padding:6px 4px 0;font-size:12.5px;color:var(--ink2)}
+#mbtn{display:none;position:fixed;right:16px;bottom:16px;z-index:1041;
+  align-items:center;gap:6px;padding:10px 16px;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);font-size:14px;box-shadow:0 6px 18px var(--shadow-lg);cursor:pointer}
+#backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1039;display:none}
+#backdrop.show{display:block}
+body,section,#sidebar,.box,.day,.pill,.kpi,th,td,.theme-btn,.stage{
+  transition:background-color .22s ease,color .22s ease,border-color .22s ease}
+@media (max-width:991.98px){
+  #sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.show{transform:none}
+  main{margin-left:0}
+  #mbtn{display:inline-flex}
+  .brand .theme-btn{display:none}
+  .theme-float{display:inline-flex}
+  .theme-btn{position:fixed;top:auto;right:16px;bottom:76px;z-index:1041;margin:0;
+    background:var(--card);color:var(--ink);border-color:var(--line);
+    box-shadow:0 4px 16px var(--shadow-lg)}
+  body.nav-open{overflow:hidden}
+  .kpis,.grid{grid-template-columns:1fr}
+  .hero{padding:26px 20px 24px}
+  section{padding:18px 16px 20px}
+  table{font-size:12.5px}
+  .tw table.wide{min-width:720px}
+  th,td{padding:6px 8px}
+}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *{transition:none !important}
+}
+@media print{
+  .theme-btn,#mbtn,#backdrop{display:none !important}
+  #sidebar{display:none}
+  main{margin:0}
+  section{break-inside:avoid;box-shadow:none}
+}
+</style>
+</head>
+<body>
+<div id="backdrop"></div>
+<button id="mbtn" type="button" aria-controls="sidebar" aria-expanded="false">目录</button>
+
+<nav id="sidebar" aria-label="文档目录">
+  <div class="brand">
+    <div class="brand-title">植物大战僵尸 · 设计文档</div>
+    <div class="brand-sub">v1.0 · 十关塔防 · 2026-11</div>
+    <button class="theme-btn" type="button" data-role="theme"
+            aria-label="切换外观（跟随系统 / 浅色 / 深色）"
+            title="切换外观：跟随系统 → 浅色 → 深色">
+      <span class="i i-auto"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg></span>
+      <span class="i i-light"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg></span>
+      <span class="i i-dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.8 8.8 0 1 0 10.7 10.7z"/></svg></span>
+      <span class="t t-auto">跟随系统</span><span class="t t-light">浅色</span><span class="t t-dark">深色</span>
+    </button>
+  </div>
+
+  <div class="nav-group">一 · 看懂游戏</div>
+  <a class="nav-link" href="#s1"><span class="num">01</span>游戏概览</a>
+  <a class="nav-link" href="#s2"><span class="num">02</span>设计目标与体验支柱</a>
+  <a class="nav-link" href="#s3"><span class="num">03</span>核心循环</a>
+
+  <div class="nav-group">二 · 操作与经济</div>
+  <a class="nav-link" href="#s4"><span class="num">04</span>操作与输入</a>
+  <a class="nav-link" href="#s5"><span class="num">05</span>阳光经济</a>
+
+  <div class="nav-group">三 · 单位与战斗</div>
+  <a class="nav-link" href="#s6"><span class="num">06</span>植物图鉴</a>
+  <a class="nav-link" href="#s7"><span class="num">07</span>僵尸图鉴</a>
+  <a class="nav-link" href="#s8"><span class="num">08</span>战斗数值与判定</a>
+  <a class="nav-link" href="#s9"><span class="num">09</span>波次系统</a>
+
+  <div class="nav-group">四 · 关卡与结算</div>
+  <a class="nav-link" href="#s10"><span class="num">10</span>十关曲线</a>
+  <a class="nav-link" href="#s11"><span class="num">11</span>胜负、星级与解锁</a>
+
+  <div class="nav-group">五 · 表现与工程</div>
+  <a class="nav-link" href="#s12"><span class="num">12</span>表现层：绘制与音效</a>
+  <a class="nav-link" href="#s13"><span class="num">13</span>UI 流程与状态机</a>
+  <a class="nav-link" href="#s14"><span class="num">14</span>存档与数据</a>
+
+  <div class="nav-group">六 · 收尾</div>
+  <a class="nav-link" href="#s15"><span class="num">15</span>已知问题与迭代建议</a>
+  <a class="nav-link" href="#a1"><span class="num">A1</span>附录：源码地图</a>
+  <a class="nav-link" href="#a2"><span class="num">A2</span>附录：关卡字段</a>
+</nav>
+
+<button class="theme-btn theme-float" type="button" data-role="theme"
+            aria-label="切换外观（跟随系统 / 浅色 / 深色）"
+            title="切换外观：跟随系统 → 浅色 → 深色">
+      <span class="i i-auto"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg></span>
+      <span class="i i-light"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg></span>
+      <span class="i i-dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.8 8.8 0 1 0 10.7 10.7z"/></svg></span>
+      <span class="t t-auto">跟随系统</span><span class="t t-light">浅色</span><span class="t t-dark">深色</span>
+    </button>
+
+<main>
+<div class="wrap">
+
+  <header class="hero" id="top">
+    <span class="tag">游戏设计文档 · 塔防策略</span>
+    <h1>植物大战僵尸（网页版）</h1>
+    <p class="lead">九列五行草坪，七种植物、六种僵尸、十关波次。本文按实现口径拆解资源节奏、单位数值、波次预算与结算规则，供后续平衡调整与新增关卡使用。</p>
+    <div class="kpis">
+      <div class="kpi"><b>9×5 格</b><span>45 个种植位的固定战场</span></div>
+      <div class="kpi"><b>7 植物 / 6 僵尸</b><span>逐关解锁，最后一关出巨人</span></div>
+      <div class="kpi"><b>10 关 · 30 星</b><span>星级由剩余割草机决定</span></div>
+    </div>
+  </header>
+
+  <section id="s1">
+    <h2><span class="n">01</span>游戏概览</h2>
+    <p>这是「小豆豆的游戏广场」里的塔防项目：僵尸从右侧草坪进攻，玩家用阳光种植防守单位，撑过全部波次即获胜。实现为单个 HTML 文件（1696 行），战场与角色全部 Canvas 矢量绘制，无图片素材；在广场页里以全屏舞台加载，顶栏负责返回广场。</p>
+    <div class="tw"><table>
+      <tbody>
+        <tr><th style="width:130px">文件</th><td><code>植物大战僵尸.html</code>，1696 行，单文件</td></tr>
+        <tr><th>战场尺寸</th><td>逻辑画布 1180×630；外层舞台 1180×760（顶部 118 是 HUD）</td></tr>
+        <tr><th>网格</th><td>9 列 × 5 行，单格 100×108，左上角 (170, 45)，右下 (1070, 585)</td></tr>
+        <tr><th>割草机</th><td>每行 1 台，停在 x=122；触发后以 420 px/s 横扫</td></tr>
+        <tr><th>操作设备</th><td>鼠标点击为主；键盘 1–7 / S / 空格 / F / M</td></tr>
+        <tr><th>单关时长</th><td>3–8 分钟（波数越多越长，第 10 关约 7 分钟）</td></tr>
+        <tr><th>目标用户</th><td>8–14 岁；难度以「第一次可能输，调整阵容后能过」为基准</td></tr>
+        <tr><th>进度保存</th><td>localStorage 单键：解锁进度、十关星级、静音状态</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box key"><b>一句话定位：</b>用「阳光 → 植物 → 防线」的资源循环，把塔防的取舍压缩到 45 个格子、7 张卡和 10 条波次里。</div>
+  </section>
+
+  <section id="s2">
+    <h2><span class="n">02</span>设计目标与体验支柱</h2>
+    <h3>支柱一：资源先于火力</h3>
+    <p>开局阳光只有 100–150，第一株向日葵要 50，豌豆射手要 100。玩家必须在前 60 秒做一次判断：多种经济，还是先出两株输出顶住第一波。这个判断错了，后面每一波都会更吃力——塔防的「延迟满足」就建立在这里。</p>
+    <h3>支柱二：防线是空间谜题</h3>
+    <p>僵尸只从本行走，豌豆也只打本行，所以每一行都是一条独立的小战线。九列的空间分配（前排肉盾、中排输出、后排经济）比单卡强度更重要。</p>
+    <h3>支柱三：信息透明</h3>
+    <p>卡片上常驻阳光价格与冷却；僵尸有血条、受击闪白、冰冻标记；波次进度条用僵尸头图标随进度移动；最后一波与中段「一大波僵尸正在接近」都有全屏横幅。玩家不需要背数值也能读懂战场。</p>
+    <h3>支柱四：失败可复盘</h3>
+    <p>输了会明确告诉你是「被吃穿防线」，并保留「再试一次」；赢了会显示剩余割草机数与击杀数，把星级和具体表现挂钩，而不是只给一个分数。</p>
+    <div class="box warn"><b>边界：</b>不做无尽模式、不做卡组构筑、不做多路线地图。十关是固定的「教学 → 加压 → 终局」曲线，保证孩子每次打开都能从上次的关卡继续。</div>
+  </section>
+
+  <section id="s3">
+    <h2><span class="n">03</span>核心循环</h2>
+    <div class="grid">
+      <div class="stage s1">
+        <span class="badge">第一段 · 收阳光</span>
+        <p>天降阳光每 8–11 秒一颗，向日葵每 22 秒产一颗，每颗 25 点。阳光落地 12 秒后消失，逼玩家在防守的同时保持点击。开局前 20 多秒没有僵尸，是专门留给「攒经济」的窗口。</p>
+      </div>
+      <div class="stage s2">
+        <span class="badge">第二段 · 种植</span>
+        <p>点卡片 → 点格子 → 扣阳光、进冷却。阳光还够且卡没进冷却时保持选中，可以连续种同一种植物；右键或 Esc 取消。铲子可以免费清格，但不返还阳光。</p>
+      </div>
+      <div class="stage s3">
+        <span class="badge">第三段 · 守波</span>
+        <p>僵尸逐只从右侧进场，啃到植物就停下开吃（25 点/秒）。每行一台割草机是最后保险；一旦某行割草机已用掉又被突破，直接判负。</p>
+      </div>
+    </div>
+    <h3>一局的心跳</h3>
+    <p>波次不是均匀刷的：一波刷完到「场上剩 1 只」或 42 秒上限，才进入 3.5 秒的间歇，然后开下一波。所以紧张感是「脉冲式」的——清场后有 3 秒喘息，用来补种和收阳光。</p>
+    <p>胜利条件只有一个：最后一波的僵尸全部被消灭（<code>allSpawned</code> 且 <code>zombies.length === 0</code>）。不存在「撑到时间结束」，玩家必须清干净。</p>
+  </section>
+
+  <section id="s4">
+    <h2><span class="n">04</span>操作与输入</h2>
+    <div class="tw"><table>
+      <thead><tr><th>操作</th><th>行为</th><th>细节</th></tr></thead>
+      <tbody>
+        <tr><td>左键点阳光</td><td>收集</td><td>命中半径 38 px，收集后飞向阳光计数并 +25</td></tr>
+        <tr><td>左键点卡片</td><td>选中植物</td><td>阳光不足或冷却中会提示并拒绝</td></tr>
+        <tr><td>左键点格子</td><td>种下</td><td>格子已有植物会提示；阳光不足自动取消选中</td></tr>
+        <tr><td>右键 / Esc</td><td>取消选择</td><td>同时取消铲子状态</td></tr>
+        <tr><td>S</td><td>切换铲子</td><td>进入铲子态后点植物即移除，单次生效</td></tr>
+        <tr><td>空格</td><td>暂停 / 继续</td><td>切到后台（blur）也会自动暂停</td></tr>
+        <tr><td>F</td><td>1× / 2× 速度</td><td>只影响时间步进，不改变数值</td></tr>
+        <tr><td>M</td><td>静音</td><td>状态写入存档</td></tr>
+        <tr><td>1–7</td><td>快捷选卡</td><td>按当前关卡已解锁卡序</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box warn"><b>已知限制：</b>战场只监听鼠标事件（mousedown / mousemove），没有做指针与触摸适配。移动端浏览器通常会把点按合成为鼠标事件，所以勉强能种，但没有手势支持、命中区也偏小，实际体验并未经过优化与验证。</div>
+  </section>
+
+  <section id="s5">
+    <h2><span class="n">05</span>阳光经济</h2>
+    <div class="tw"><table>
+      <thead><tr><th>来源</th><th class="num">产出</th><th class="num">周期</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>开局赠送</td><td class="num">100–150</td><td class="num">—</td><td>按关卡配置，第 10 关 150</td></tr>
+        <tr><td>天降阳光</td><td class="num">25 / 颗</td><td class="num">8–11 s</td><td>间隔带 ±15% 抖动，落点随机在草坪内</td></tr>
+        <tr><td>向日葵</td><td class="num">25 / 颗</td><td class="num">22 s</td><td>首次产出在种下 6 秒后</td></tr>
+        <tr><td>阳光存活</td><td class="num">—</td><td class="num">12 s</td><td>落地后 12 秒未点即消失</td></tr>
+      </tbody>
+    </table></div>
+    <p>据此估算：一株向日葵每分钟产约 68 点阳光，约 2.7 颗。第 1 关 8 秒一颗天降阳光等于每分钟 187 点，是主要来源；到第 9 关天降间隔拉到 11 秒（约 136 点/分钟），经济压力明显上升，这时向日葵从「可选」变成「必需」。</p>
+    <div class="box key"><b>设计意图：</b>天降阳光是「保底收入」，向日葵是「投资」。关卡越靠后，保底收入越少、僵尸越多，玩家必须自己补经济——这条曲线就是难度本身。</div>
+  </section>
+
+  <section id="s6">
+    <h2><span class="n">06</span>植物图鉴</h2>
+    <div class="tw"><table>
+      <thead><tr><th>植物</th><th class="num">阳光</th><th class="num">冷却</th><th class="num">生命</th><th>行为与数值</th></tr></thead>
+      <tbody>
+        <tr><td>向日葵</td><td class="num">50</td><td class="num">5 s</td><td class="num">100</td><td>每 22 秒产 25 阳光，种下 6 秒后开始计时</td></tr>
+        <tr><td>豌豆射手</td><td class="num">100</td><td class="num">5 s</td><td class="num">100</td><td>本行有僵尸时每 1.45 秒发一颗豌豆，伤害 20</td></tr>
+        <tr><td>坚果墙</td><td class="num">50</td><td class="num">20 s</td><td class="num">800</td><td>不攻击；按 25 点/秒被啃，理论可挡 32 秒</td></tr>
+        <tr><td>土豆雷</td><td class="num">25</td><td class="num">20 s</td><td class="num">100</td><td>14 秒出土；同行 34 px 内有僵尸即引爆，80 px 内 900 伤害</td></tr>
+        <tr><td>寒冰射手</td><td class="num">175</td><td class="num">8 s</td><td class="num">100</td><td>同豌豆伤害，命中后减速 50%，持续 4 秒</td></tr>
+        <tr><td>樱桃炸弹</td><td class="num">150</td><td class="num">30 s</td><td class="num">100</td><td>1.1 秒引信；影响上下各 1 行、横向 160 px 内，900 伤害</td></tr>
+        <tr><td>双发射手</td><td class="num">200</td><td class="num">8 s</td><td class="num">100</td><td>每次射两发（间隔 0.14 秒），单发 20</td></tr>
+      </tbody>
+    </table></div>
+    <p>所有植物的冷却从「种下瞬间」开始计算，卡片上的竖直进度条就是冷却剩余比例。爆炸类植物（土豆雷、樱桃）用完即消失，不占格子也不留尸体。</p>
+    <h3>性价比速览</h3>
+    <div class="tw"><table>
+      <thead><tr><th>指标</th><th class="num">单发</th><th class="num">理论 DPS</th><th>评价</th></tr></thead>
+      <tbody>
+        <tr><td>豌豆射手</td><td class="num">20 / 1.45 s</td><td class="num">≈ 13.8</td><td>基础输出，100 阳光里最稳的一档</td></tr>
+        <tr><td>双发射手</td><td class="num">40 / 1.45 s</td><td class="num">≈ 27.6</td><td>200 阳光换双倍输出，等价但省格子</td></tr>
+        <tr><td>寒冰射手</td><td class="num">20 / 1.45 s</td><td class="num">≈ 13.8 + 控场</td><td>175 阳光买的是「时间」，不是伤害</td></tr>
+        <tr><td>坚果墙</td><td class="num">—</td><td class="num">800 吸收</td><td>折合 32 秒阻挡，通常能换出 2–3 轮齐射</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="s7">
+    <h2><span class="n">07</span>僵尸图鉴</h2>
+    <div class="tw"><table>
+      <thead><tr><th>僵尸</th><th class="num">生命</th><th class="num">速度</th><th class="num">权重</th><th>特点与破解</th></tr></thead>
+      <tbody>
+        <tr><td>普通僵尸</td><td class="num">100</td><td class="num">17</td><td class="num">1</td><td>基础单位；单株豌豆约 7.2 秒击杀</td></tr>
+        <tr><td>旗帜僵尸</td><td class="num">100</td><td class="num">23</td><td class="num">1</td><td>第 3 波起每波一只，速度更快，视觉上标记「这一波开始了」</td></tr>
+        <tr><td>路障僵尸</td><td class="num">280</td><td class="num">17</td><td class="num">2</td><td>血量约为普通 2.8 倍；血量高于 100 时显示路障</td></tr>
+        <tr><td>铁桶僵尸</td><td class="num">560</td><td class="num">16</td><td class="num">4</td><td>最厚的常规单位；单株豌豆需约 40 秒</td></tr>
+        <tr><td>橄榄球僵尸</td><td class="num">420</td><td class="num">34</td><td class="num">4</td><td>速度翻倍，靠坚果与寒冰拖住；穿过草坪只要约 30 秒</td></tr>
+        <tr><td>巨人僵尸</td><td class="num">1800</td><td class="num">8</td><td class="num">15</td><td>不啃食，每 1.1 秒直接拍碎一株植物；只在第 10 关终波出现，固定 2 只</td></tr>
+      </tbody>
+    </table></div>
+    <p>「权重」是波次抽卡时使用的相对概率，不是分值：预算按 <code>pts</code> 累加（普通 1、路障 2、铁桶 4、橄榄球 4、巨人 15），权重只决定「抽到谁」。所以第 8 关池子里铁桶权重 4，实际铁桶占比会显著高于普通僵尸，预算消耗也更快。</p>
+    <div class="box key"><b>穿越时间对照：</b>草坪横向约 1010 px。普通僵尸走完全程约 59 秒，橄榄球约 30 秒，巨人约 126 秒——巨人慢，但它的威胁是「不啃、直接拍碎」，所以不能靠坚果拖时间。</div>
+  </section>
+
+  <section id="s8">
+    <h2><span class="n">08</span>战斗数值与判定</h2>
+    <h3>豌豆与命中</h3>
+    <p>豌豆以 330 px/s 直线飞行，只命中本行；判定用僵尸的横向半宽（普通 20 px，巨人 36 px）。同一行有多只僵尸时，优先命中「最靠前」的一只（x 最小）。豌豆飞出画面右侧即销毁，不回收。</p>
+    <h3>僵尸啃食</h3>
+    <p>僵尸进入某格且横向落在植物中心 ±34/40 px 内时停下啃食，每秒 25 点伤害；被寒冰减速时啃食速度同样减半到 12.5 点/秒。植物血量归零立即移除，僵尸继续前进。巨人例外：不走啃食逻辑，每 1.1 秒直接移除整株植物。</p>
+    <h3>爆炸与割草机</h3>
+    <div class="tw"><table>
+      <thead><tr><th>来源</th><th class="num">范围</th><th class="num">伤害</th><th>备注</th></tr></thead>
+      <tbody>
+        <tr><td>土豆雷</td><td class="num">同行 80 px</td><td class="num">900</td><td>一次性，留下 6 秒焦坑</td></tr>
+        <tr><td>樱桃炸弹</td><td class="num">±1 行 / 160 px</td><td class="num">900</td><td>一次性，留下 8 秒焦坑</td></tr>
+        <tr><td>割草机</td><td class="num">本行整条</td><td class="num">99999</td><td>触发后不可回收，一行只有一次</td></tr>
+      </tbody>
+    </table></div>
+    <p>900 点足以秒杀除巨人外的全部单位（巨人 1800 血需要两发，或一发炸掉一半）。焦坑只是视觉残留，不影响种植。</p>
+    <h3>失败判定</h3>
+    <p>僵尸越过草坪左边界（<code>x &lt; GX-6</code>）时检查该行割草机：未使用则启动，已使用且僵尸继续走到 <code>GX-64</code>，立即判负。也就是说每行有一次「免死」，用完之后这一行必须靠植物守住。</p>
+  </section>
+
+  <section id="s9">
+    <h2><span class="n">09</span>波次系统</h2>
+    <p>波次不是预先写死的僵尸列表，而是「按预算抽卡」。每波给定一个预算，按池子权重随机抽僵尸，直到累计分值达到预算。</p>
+    <div class="script"><b>预算公式</b><br>budget = round(base + 波次序号 × step) +（最后一波 ? round(base × 0.8) : 0）<br>抽卡：按 pool 权重随机取类型，累加该类型的 pts，直到 pts ≥ budget。</div>
+    <div class="tw"><table class="wide">
+      <thead><tr><th>机制</th><th>规则</th></tr></thead>
+      <tbody>
+        <tr><td>首发时间</td><td>关卡配置 <code>first</code>（16–26 秒），开场介绍结束才开始倒数</td></tr>
+        <tr><td>波内间隔</td><td><code>gap</code> 区间随机（2.6–8 秒）；最后一波乘以 0.45</td></tr>
+        <tr><td>波次切换</td><td>场上存活 ≤ 1 只，或本波已持续 42 秒，则 3.5 秒后开下一波</td></tr>
+        <tr><td>旗帜僵尸</td><td>第 3 波及以后每波开头插入 1 只</td></tr>
+        <tr><td>终波</td><td>第 10 关额外追加 2 只巨人；其余关卡只加 80% 基础预算</td></tr>
+        <tr><td>胜利</td><td>最后一波刷完且场上僵尸清零</td></tr>
+      </tbody>
+    </table></div>
+    <h3>十关波次参数</h3>
+    <div class="tw"><table class="wide">
+      <thead><tr><th class="num">关</th><th>名称</th><th class="num">波数</th><th class="num">base</th><th class="num">step</th><th>池子（类型:权重）</th><th class="num">首发 s</th><th class="num">间隔 s</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>初来乍到</td><td class="num">3</td><td class="num">2</td><td class="num">1</td><td>普通 1</td><td class="num">26</td><td class="num">5–8</td></tr>
+        <tr><td class="num">2</td><td>坚果防线</td><td class="num">4</td><td class="num">3</td><td class="num">1.5</td><td>普通 8 · 路障 2</td><td class="num">24</td><td class="num">4.5–7</td></tr>
+        <tr><td class="num">3</td><td>土豆雷区</td><td class="num">4</td><td class="num">4</td><td class="num">2</td><td>普通 7 · 路障 3</td><td class="num">22</td><td class="num">4–6.5</td></tr>
+        <tr><td class="num">4</td><td>冰霜豌豆</td><td class="num">5</td><td class="num">4</td><td class="num">2</td><td>普通 6 · 路障 3 · 铁桶 1</td><td class="num">22</td><td class="num">3.8–6</td></tr>
+        <tr><td class="num">5</td><td>樱桃炸弹</td><td class="num">5</td><td class="num">5</td><td class="num">2.5</td><td>普通 6 · 路障 3 · 铁桶 2</td><td class="num">20</td><td class="num">3.5–5.5</td></tr>
+        <tr><td class="num">6</td><td>双发火力</td><td class="num">6</td><td class="num">5</td><td class="num">2.5</td><td>普通 5 · 路障 3 · 铁桶 2 · 橄榄球 1</td><td class="num">20</td><td class="num">3.2–5.2</td></tr>
+        <tr><td class="num">7</td><td>疾风冲刺</td><td class="num">6</td><td class="num">6</td><td class="num">3</td><td>普通 5 · 路障 3 · 铁桶 2 · 橄榄球 3</td><td class="num">18</td><td class="num">3–5</td></tr>
+        <tr><td class="num">8</td><td>铁桶洪流</td><td class="num">7</td><td class="num">6</td><td class="num">3</td><td>普通 4 · 路障 3 · 铁桶 4 · 橄榄球 2</td><td class="num">18</td><td class="num">2.8–4.6</td></tr>
+        <tr><td class="num">9</td><td>暗夜狂潮</td><td class="num">8</td><td class="num">7</td><td class="num">3</td><td>普通 4 · 路障 3 · 铁桶 4 · 橄榄球 3</td><td class="num">16</td><td class="num">2.6–4.2</td></tr>
+        <tr><td class="num">10</td><td>巨人来袭</td><td class="num">8</td><td class="num">8</td><td class="num">3.5</td><td>普通 4 · 路障 3 · 铁桶 4 · 橄榄球 3（终波 +2 巨人）</td><td class="num">24</td><td class="num">3–4.8</td></tr>
+      </tbody>
+    </table></div>
+    <p>以第 10 关为例：各波预算约为 8 / 12 / 15 / 19 / 22 / 26 / 29 / 39，累计 170 分。普通僵尸 1 分、铁桶 4 分，按经验平均约 3 分一只，全场约 55–60 只。</p>
+  </section>
+
+  <section id="s10">
+    <h2><span class="n">10</span>十关曲线</h2>
+    <div class="days">
+      <div class="day"><b>第 1 关 · 初来乍到</b><span>只有向日葵与豌豆射手，3 波纯普通僵尸。教学靠四条浮动提示：收阳光、种向日葵、种豌豆、多补经济。</span></div>
+      <div class="day"><b>第 2 关 · 坚果防线</b><span>解锁坚果墙。路障僵尸进入池子（权重 2），逼玩家把坚果放在前排并理解「阻挡 ≠ 击杀」。</span></div>
+      <div class="day"><b>第 3 关 · 土豆雷区</b><span>解锁土豆雷（25 阳光、14 秒出土）。前期用它省阳光，代价是要预判出土时机。</span></div>
+      <div class="day"><b>第 4 关 · 冰霜豌豆</b><span>解锁寒冰射手。首次出现铁桶，减速从「锦上添花」变成「拖住厚血单位」的必需手段。</span></div>
+      <div class="day"><b>第 5 关 · 樱桃炸弹</b><span>解锁樱桃炸弹（150 阳光 / 30 秒冷却）。第一次出现「一波顶不住就炸」的救场需求。</span></div>
+      <div class="day"><b>第 6 关 · 双发火力</b><span>解锁双发射手，同时橄榄球首次登场。速度型敌人开始考验前排厚度。</span></div>
+      <div class="day"><b>第 7 关 · 疾风冲刺</b><span>橄榄球权重升到 3，成波冲锋。坚果与寒冰的组合从可选变成标准解。</span></div>
+      <div class="day"><b>第 8 关 · 铁桶洪流</b><span>铁桶权重 4，7 波。厚血单位密集，双发 + 寒冰的性价比在这关最明显。</span></div>
+      <div class="day"><b>第 9 关 · 暗夜狂潮</b><span>起始阳光 125 但天降间隔拉到 11 秒，8 波全种类混编。经济与输出同时吃紧。</span></div>
+      <div class="day"><b>第 10 关 · 巨人来袭</b><span>8 波，终波追加 2 只 1800 血巨人。巨人直接拍碎植物，必须用樱桃/土豆雷或多人集火。</span></div>
+    </div>
+    <div class="box key"><b>曲线形状：</b>波数从 3 递增到 8，首发时间从 26 秒压到 16 秒，天降阳光间隔从 8 秒拉到 11 秒。三条线同时收紧，但每关只加一种新单位，避免「一次学三件事」。</div>
+  </section>
+
+  <section id="s11">
+    <h2><span class="n">11</span>胜负、星级与解锁</h2>
+    <h3>星级规则</h3>
+    <div class="tw"><table>
+      <thead><tr><th>条件</th><th>星级</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td>5 台割草机全部未使用</td><td>★★★</td><td>零失误，每行都靠植物守住</td></tr>
+        <tr><td>剩余 ≥ 3 台</td><td>★★</td><td>最多被突破 2 行</td></tr>
+        <tr><td>剩余 1–2 台</td><td>★</td><td>惊险通关</td></tr>
+      </tbody>
+    </table></div>
+    <p>星级只取历史最高，重复挑战不会掉星。割草机是「行数级」的容错资源，所以三星等价于「没有一行被攻破」——比单纯的血量或分数更直观。</p>
+    <h3>解锁</h3>
+    <p>通过第 N 关后，<code>unlocked = min(10, N+1)</code>（数组下标口径是 N+2），即下一关解锁；选关页对未解锁关卡显示锁图标与「通过第 N 关解锁」。没有任何关卡一开始就全开，这一点与《小豆闯关记》不同——塔防需要按顺序学新单位。</p>
+    <p>通关第 10 关后不再解锁新关，胜利面板文案切换为「恭喜通关全部 10 关」，「下一关」按钮隐藏。</p>
+  </section>
+
+  <section id="s12">
+    <h2><span class="n">12</span>表现层：绘制与音效</h2>
+    <h3>全矢量绘制</h3>
+    <p>没有一张位图。向日葵的花瓣、豌豆射手的炮口、坚果的表情、僵尸的帽子与铁桶、割草机的轮子，全部由路径与渐变实时画出。好处是任意缩放不糊、体积极小；代价是每个单位都要写一段绘制函数。</p>
+    <ul>
+      <li>僵尸会按血量切换外观：路障在血量高于 100 时显示，铁桶高于 100 时显示，被打掉后露出光头。</li>
+      <li>受击闪白、血条、冰冻雪花标记都是独立图层，叠在单位上。</li>
+      <li>场地：草坪按行交替深浅，右侧是灰化的「入场区」，左侧是割草机轨道。</li>
+    </ul>
+    <h3>音效：20 余种 WebAudio 合成</h3>
+    <div class="tw"><table>
+      <thead><tr><th>类别</th><th>音名</th><th>触发</th></tr></thead>
+      <tbody>
+        <tr><td>操作</td><td>click / select / place / shovel / error</td><td>按钮、选卡、种植、铲除、非法操作</td></tr>
+        <tr><td>战斗</td><td>shoot / snowshoot / hit / chomp / boom / mine</td><td>射击、冰豌豆、命中、啃食、爆炸、地雷</td></tr>
+        <tr><td>经济</td><td>sun / sunland</td><td>收阳光、阳光落地</td></tr>
+        <tr><td>氛围</td><td>groan / mower / wave</td><td>僵尸低吼、割草机启动、波次警报</td></tr>
+        <tr><td>结算</td><td>win / lose / star / arm / freeze</td><td>胜利、失败、点亮星星、土豆雷出土、冰冻</td></tr>
+      </tbody>
+    </table></div>
+    <p>音效内部有 45 毫秒节流，防止同一帧内多次触发叠成噪音；静音状态写入存档，下次打开保持。</p>
+    <h3>HUD</h3>
+    <p>左侧阳光框（图标 + 数字，收取时弹一下）；中间七张种子卡（价格、冷却遮罩、选中高亮、买不起置灰）；右侧铲子、波次进度条（僵尸头随进度移动）、暂停、速度、静音、退出。</p>
+    <div class="box warn"><b>字体依赖：</b>标题字体通过 CSS 从在线字体库加载（站酷快乐体），离线或被墙时会回退到系统黑体。功能不受影响，只是标题的字形会变。</div>
+  </section>
+
+  <section id="s13">
+    <h2><span class="n">13</span>UI 流程与状态机</h2>
+    <p>两层状态：屏幕（menu / levels / game）与局内状态（idle / intro / playing / paused / win / lose）。</p>
+    <div class="tw"><table>
+      <thead><tr><th>状态</th><th>界面</th><th>进入</th><th>离开</th></tr></thead>
+      <tbody>
+        <tr><td>menu</td><td>主菜单（开始 / 玩法说明）</td><td>加载完成</td><td>开始 → 选关</td></tr>
+        <tr><td>levels</td><td>十关卡片（锁 / 星级 / 新植物角标）</td><td>点开始</td><td>点关卡 → game</td></tr>
+        <tr><td>intro</td><td>关卡开场（关名、波数、出场敌人、新植物图标）</td><td>进入关卡</td><td>点「开始」</td></tr>
+        <tr><td>playing</td><td>战场</td><td>开场结束</td><td>暂停 / 胜负</td></tr>
+        <tr><td>paused</td><td>暂停面板（继续 / 重开 / 说明 / 回选关）</td><td>空格、按钮、失焦</td><td>继续或退出</td></tr>
+        <tr><td>win</td><td>胜利面板（三星逐个点亮、剩余割草机、解锁提示）</td><td>清完最后一波</td><td>下一关 / 重玩 / 选关</td></tr>
+        <tr><td>lose</td><td>失败面板（被吃穿的提示、重试、选关）</td><td>某行被彻底突破</td><td>重试 / 选关</td></tr>
+      </tbody>
+    </table></div>
+    <p>关键细节：任何会离开战场的操作（暂停、退出、失焦）都必须停止时间步进，否则玩家回来时会发现波次已经推进。代码里通过 <code>G.state</code> 单一判断实现，主循环只在 playing 时更新战场。</p>
+  </section>
+
+  <section id="s14">
+    <h2><span class="n">14</span>存档与数据</h2>
+    <div class="tw"><table>
+      <thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>unlocked</code></td><td>整数</td><td>已解锁到第几关（1–10）</td></tr>
+        <tr><td><code>stars</code></td><td>长度 10 的数组</td><td>每关 0–3 星，取历史最高</td></tr>
+        <tr><td><code>muted</code></td><td>布尔</td><td>静音状态</td></tr>
+      </tbody>
+    </table></div>
+    <p>存储键为 <code>pvz_web_save_v1</code>。读档时会校验 <code>unlocked</code> 是否为数字、<code>stars</code> 是否为长度 10 的数组，不合法则回退默认（只解锁第 1 关）。选关页底部提供「清空进度」按钮，带二次确认。</p>
+    <div class="box key"><b>设计取舍：</b>不存战场中间状态。退出关卡就是放弃本局，避免「存档读档刷阳光」这类破坏平衡的玩法；对儿童来说规则也更好理解。</div>
+  </section>
+
+  <section id="s15">
+    <h2><span class="n">15</span>已知问题与迭代建议</h2>
+    <div class="tw"><table>
+      <thead><tr><th>问题</th><th>影响</th><th>建议</th></tr></thead>
+      <tbody>
+        <tr><td>只监听鼠标事件，未做指针/触摸适配</td><td>移动端只能靠浏览器合成的鼠标事件勉强操作，无手势、命中区偏小</td><td>改指针事件（pointerdown / pointermove），并放大阳光点击半径</td></tr>
+        <tr><td>波次随机行，可能集中同一行</td><td>某一行压力爆炸、另一行空置，胜负带随机性</td><td>抽行时加「最少压力行」权重，或保证每行至少一只</td></tr>
+        <tr><td>巨人固定 2 只、固定终波</td><td>第 10 关攻略高度固定，重玩价值低</td><td>巨人数量随剩余割草机变化，或加入第二只中途登场</td></tr>
+        <tr><td>星级只看割草机</td><td>玩家可以放掉一路、集中守四路拿两星，策略被简化</td><td>代码已在统计 <code>plantsLost</code> 但未参与评分，可把它或「用时」加为第二维度</td></tr>
+        <tr><td>没有卡组上限</td><td>到第 6 关后七张卡全开，选择压力消失</td><td>引入「本关只能带 5 张」的出战卡组</td></tr>
+        <tr><td>无双发/豌豆的射击音区分度低</td><td>多株同时开火时听感糊成一片</td><td>按行数做轻微音高偏移，或加节流分层</td></tr>
+        <tr><td>标题字体依赖在线 CDN</td><td>离线时标题字形回退，观感不一致</td><td>字体本地化，或改用纯 CSS 字形方案</td></tr>
+        <tr><td>没有无尽/挑战模式</td><td>十关打完即结束，缺少长期目标</td><td>十关通关后解锁「无尽草坪」，按波数排行</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box dark"><b>优先级建议：</b>先做「指针/触屏适配」，注意现在只是靠浏览器把点按合成鼠标事件，命中区与手势都不足；再做「随机行加权」，它决定每一局的公平感；卡组上限与无尽模式属于内容扩展，放在平衡稳定之后。</div>
+  </section>
+
+  <section id="a1">
+    <h2><span class="n">A1</span>附录：源码地图</h2>
+    <p>行号对应 <code>植物大战僵尸.html</code> 当前版本，按小节注释检索比记行号更可靠。</p>
+    <div class="tw"><table>
+      <thead><tr><th>模块</th><th class="num">起始行</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td>工具函数</td><td class="num">263</td><td>clamp / rand / randi / 选择器</td></tr>
+        <tr><td>常量与几何</td><td class="num">270</td><td>画布、网格、格子尺寸、割草机位置</td></tr>
+        <tr><td>音频</td><td class="num">280</td><td>WebAudio 合成与 20 余种音效</td></tr>
+        <tr><td>单位与关卡数据</td><td class="num">337</td><td><code>PLANTS</code> / <code>ZOMBIES</code> / <code>LEVELS</code></td></tr>
+        <tr><td>存档</td><td class="num">369</td><td><code>pvz_web_save_v1</code> 读写</td></tr>
+        <tr><td>游戏状态</td><td class="num">375</td><td><code>G</code> 全局对象</td></tr>
+        <tr><td>绘制函数</td><td class="num">394</td><td>植物、僵尸、阳光、割草机、铲子</td></tr>
+        <tr><td>关卡重置</td><td class="num">772</td><td>网格、割草机、卡槽、计时器</td></tr>
+        <tr><td>波次</td><td class="num">795</td><td><code>buildWave</code> / <code>beginWave</code> / <code>updateWaves</code></td></tr>
+        <tr><td>植物逻辑</td><td class="num">858</td><td>种植、产阳光、射击、地雷、樱桃</td></tr>
+        <tr><td>豌豆</td><td class="num">958</td><td>飞行与命中</td></tr>
+        <tr><td>僵尸逻辑</td><td class="num">992</td><td>移动、啃食、巨人拍碎、割草机触发</td></tr>
+        <tr><td>阳光</td><td class="num">1052</td><td>天降、落地、收集动画</td></tr>
+        <tr><td>胜负</td><td class="num">1454</td><td>星级、解锁、胜利与失败面板</td></tr>
+        <tr><td>输入</td><td class="num">1490</td><td>鼠标、键盘、暂停、加速、静音</td></tr>
+        <tr><td>UI 与主循环</td><td class="num">1552</td><td>按钮绑定、选关网格、requestAnimationFrame</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="a2">
+    <h2><span class="n">A2</span>附录：关卡字段</h2>
+    <div class="tw"><table>
+      <thead><tr><th>字段</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>name</code> / <code>desc</code></td><td>关卡名与一句话描述，显示在选关卡片与开场页</td></tr>
+        <tr><td><code>plants</code></td><td>本关可用的植物数组，决定卡槽数量与顺序</td></tr>
+        <tr><td><code>startSun</code></td><td>开局阳光（100–150）</td></tr>
+        <tr><td><code>skySun</code></td><td>天降阳光的基础间隔（秒），实际带 ±15% 抖动</td></tr>
+        <tr><td><code>waves</code></td><td>总波数（3–8）</td></tr>
+        <tr><td><code>base</code> / <code>step</code></td><td>波次预算基线与每波增量</td></tr>
+        <tr><td><code>pool</code></td><td>僵尸池与权重，如 <code>{normal:5, cone:3, bucket:2}</code></td></tr>
+        <tr><td><code>gap</code></td><td>波内出怪间隔区间 <code>[最小, 最大]</code></td></tr>
+        <tr><td><code>first</code></td><td>首波延迟（秒）</td></tr>
+        <tr><td><code>zHint</code></td><td>选关卡片上的「出场」文案</td></tr>
+        <tr><td><code>boss</code></td><td>为 true 时终波追加 2 只巨人</td></tr>
+      </tbody>
+    </table></div>
+    <p>新增一关的最小步骤：在 <code>LEVELS</code> 里加一条配置，确认 <code>plants</code> 里的植物已存在于 <code>PLANTS</code>，必要时给 <code>ZOMBIES</code> 加新类型（含绘制函数），并在 <code>stars</code> 存档数组上兼容长度。选关页与解锁逻辑会自动读取新配置。</p>
+  </section>
+
+</div>
+<footer>小豆豆的游戏广场 · 设计文档系列 · 本文以 <code>植物大战僵尸.html</code> v1 实现为准，数值如有调整请同步更新本页。</footer>
+</main>
+
+<script>
+(function(){
+  var sidebar=document.getElementById('sidebar');
+  var links=[].slice.call(sidebar.querySelectorAll('.nav-link'));
+  var secs=links.map(function(a){
+    return document.getElementById(a.getAttribute('href').slice(1));
+  }).filter(Boolean);
+  if(!secs.length) return;
+
+  var last=null, lockUntil=0;
+
+  function mark(id){
+    links.forEach(function(a){
+      var on=a.getAttribute('href')==='#'+id;
+      a.classList.toggle('active',on);
+      if(on){ a.setAttribute('aria-current','true'); } else { a.removeAttribute('aria-current'); }
+    });
+  }
+
+  function current(){
+    var line=window.innerHeight*0.28;
+    var cur=secs[0];
+    for(var i=0;i<secs.length;i++){
+      if(secs[i].getBoundingClientRect().top<=line) cur=secs[i];
+    }
+    var doc=document.documentElement;
+    if(window.innerHeight+window.pageYOffset>=doc.scrollHeight-2) cur=secs[secs.length-1];
+    return cur;
+  }
+
+  function sync(){
+    if(Date.now()<lockUntil) return;
+    var s=current();
+    if(s===last) return;
+    last=s; mark(s.id);
+  }
+
+  var queued=false;
+  function onScroll(){
+    if(queued) return;
+    queued=true;
+    requestAnimationFrame(function(){ sync(); queued=false; });
+  }
+  window.addEventListener('scroll',onScroll,{passive:true});
+  window.addEventListener('resize',onScroll);
+  window.addEventListener('hashchange',function(){
+    var id=location.hash.slice(1);
+    if(document.getElementById(id)){ last=null; mark(id); }
+  });
+  window.addEventListener('load',sync);
+
+  links.forEach(function(a){
+    a.addEventListener('click',function(){
+      var id=a.getAttribute('href').slice(1);
+      last=document.getElementById(id);
+      lockUntil=Date.now()+800;
+      mark(id);
+      if(window.matchMedia('(max-width:991.98px)').matches){
+        sidebar.classList.remove('show');
+        var bd=document.getElementById('backdrop');
+        if(bd) bd.classList.remove('show');
+        document.body.classList.remove('nav-open');
+        var mb=document.getElementById('mbtn');
+        if(mb) mb.setAttribute('aria-expanded','false');
+      }
+    });
+  });
+
+  var initHash=location.hash.slice(1);
+  if(initHash && document.getElementById(initHash)){
+    last=document.getElementById(initHash);
+    mark(initHash);
+  } else {
+    sync();
+  }
+
+  var mbtn=document.getElementById('mbtn');
+  var backdrop=document.getElementById('backdrop');
+  mbtn.addEventListener('click',function(){
+    var open=sidebar.classList.toggle('show');
+    backdrop.classList.toggle('show',open);
+    document.body.classList.toggle('nav-open',open);
+    mbtn.setAttribute('aria-expanded',open?'true':'false');
+  });
+  backdrop.addEventListener('click',function(){
+    sidebar.classList.remove('show');
+    backdrop.classList.remove('show');
+    document.body.classList.remove('nav-open');
+    mbtn.setAttribute('aria-expanded','false');
+  });
+})();
+
+[].slice.call(document.querySelectorAll('[data-role="theme"]')).forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var p=window.__theme.getPref();
+    window.__theme.set(p==='auto'?'light':p==='light'?'dark':'auto');
+  });
+});
+</script>
+</body>
+</html>
+
+
+
+
+
+

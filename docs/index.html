@@ -1,0 +1,159 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" data-theme="auto" data-theme-pref="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f5f7f6">
+<title>游戏设计文档 · 小豆豆的游戏广场</title>
+<script>
+(function(){
+  var KEY='doc-theme', root=document.documentElement;
+  var mq=window.matchMedia('(prefers-color-scheme: dark)');
+  function pref(){
+    try{ var v=localStorage.getItem(KEY); return (v==='light'||v==='dark')?v:'auto'; }
+    catch(e){ return 'auto'; }
+  }
+  function resolve(p){ return p==='auto' ? (mq.matches?'dark':'light') : p; }
+  function apply(p){
+    var theme=resolve(p);
+    root.setAttribute('data-theme',theme);
+    root.setAttribute('data-theme-pref',p);
+    var m=document.querySelector('meta[name="theme-color"]');
+    if(m) m.setAttribute('content', theme==='dark' ? '#0e1514' : '#f5f7f6');
+    document.dispatchEvent(new CustomEvent('themechange',{detail:{theme:theme,pref:p}}));
+  }
+  window.__theme={
+    getPref:function(){ return pref(); },
+    set:function(p){ try{ localStorage.setItem(KEY,p); }catch(e){} apply(p); }
+  };
+  apply(pref());
+  var onChange=function(){ if(pref()==='auto') apply('auto'); };
+  if(mq.addEventListener){ mq.addEventListener('change',onChange); }
+  else if(mq.addListener){ mq.addListener(onChange); }
+})();
+</script>
+<style>
+:root{
+  --teal:#1f6f63; --teal2:#2ec4b6; --teal-ink:#1f6f63; --teal-deep:#11423b; --on-teal:#ffffff;
+  --orange:#e76f51; --amber:#f4a259; --blue:#4a86c5;
+  --ink:#20292b; --ink2:#5d6b6e;
+  --line:#e3e9e7; --soft-line:#d5e5e1;
+  --bg:#f5f7f6; --card:#ffffff;
+  --soft:#eef5f3; --warn:#fdf1ea; --zebra:#fafcfb;
+  --box-dark-bg:#20292b; --box-dark-ink:#e9efee;
+  --shadow:rgba(32,41,43,.04); --shadow-lg:rgba(32,41,43,.08);
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --teal:#17554c; --teal2:#2ec4b6;
+  --teal-ink:#5fd6c6; --teal-deep:#8fe6da; --on-teal:#ffffff;
+  --orange:#f28a70; --amber:#f7b779; --blue:#6fa8e0;
+  --ink:#e7eeec; --ink2:#9fb1ac;
+  --line:#26332f; --soft-line:#2e403b;
+  --bg:#0e1514; --card:#151d1c;
+  --soft:#1a2523; --warn:#2a1d17; --zebra:#1a2422;
+  --box-dark-bg:#0b1110; --box-dark-ink:#e7eeec;
+  --shadow:rgba(0,0,0,.35); --shadow-lg:rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.75 "PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:0 18px 64px}
+.hero{background:var(--teal);color:var(--on-teal);padding:38px 34px 34px;border-radius:0}
+.hero .tag{display:inline-block;font-size:11.5px;letter-spacing:2px;padding:3px 10px;
+  border-radius:999px;background:rgba(255,255,255,.16)}
+.hero h1{margin:14px 0 8px;font-size:30px;font-weight:800;line-height:1.3}
+.hero p{margin:0;font-size:14.5px;opacity:.92;color:var(--on-teal);max-width:760px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;
+  padding:16px 4px 6px}
+.toolbar h2{margin:0;font-size:16.5px;font-weight:700;color:var(--teal-ink)}
+.theme-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:12.5px;
+  line-height:1;cursor:pointer;box-shadow:0 2px 8px var(--shadow)}
+.theme-btn:hover{border-color:var(--teal2)}
+.theme-btn:focus-visible{outline:2px solid var(--teal2);outline-offset:2px}
+.theme-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.theme-btn .i,.theme-btn .t{display:none}
+[data-theme-pref="auto"] .theme-btn .i-auto,[data-theme-pref="auto"] .theme-btn .t-auto,
+[data-theme-pref="light"] .theme-btn .i-light,[data-theme-pref="light"] .theme-btn .t-light,
+[data-theme-pref="dark"] .theme-btn .i-dark,[data-theme-pref="dark"] .theme-btn .t-dark{display:inline-flex}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:16px}
+.card{display:block;background:var(--card);border-radius:14px;padding:22px 24px;
+  text-decoration:none;color:inherit;border:1px solid var(--line);
+  box-shadow:0 1px 2px var(--shadow);transition:transform .15s ease,border-color .15s ease}
+.card:hover{transform:translateY(-2px);border-color:var(--teal2)}
+.card:focus-visible{outline:2px solid var(--teal2);outline-offset:2px}
+.card .kind{font-size:11.5px;color:var(--ink2);letter-spacing:1px}
+.card h3{margin:6px 0 8px;font-size:20px;font-weight:800;color:var(--teal-ink)}
+.card p{margin:0 0 14px;font-size:13.5px;color:var(--ink2)}
+.card .meta{display:flex;gap:6px;flex-wrap:wrap}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;background:var(--soft);
+  color:var(--teal-ink);border:1px solid var(--soft-line);font-size:12px}
+.card .go{margin-top:14px;font-size:13px;color:var(--teal-deep);font-weight:700}
+.note{margin-top:22px;background:var(--soft);border-left:4px solid var(--teal);
+  border-radius:10px;padding:12px 16px;font-size:13.5px;color:var(--ink2)}
+.note b{color:var(--teal-deep)}
+@media (max-width:640px){.cards{grid-template-columns:1fr}.hero{padding:28px 20px}}
+body,.card,.note,.theme-btn,.pill{transition:background-color .22s ease,color .22s ease,border-color .22s ease}
+@media (prefers-reduced-motion: reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <span class="tag">设计文档</span>
+    <h1>小豆豆的游戏广场</h1>
+    <p>三款成品游戏的设计文档：玩法骨架、数值口径、关卡内容与工程结构。文档以现有代码实现为准，改版时先对照这里。</p>
+  </header>
+
+  <div class="toolbar">
+    <h2>共 3 份文档</h2>
+    <button class="theme-btn" type="button" data-role="theme"
+            aria-label="切换外观（跟随系统 / 浅色 / 深色）"
+            title="切换外观：跟随系统 → 浅色 → 深色">
+      <span class="i i-auto"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg></span>
+      <span class="i i-light"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg></span>
+      <span class="i i-dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.8 8.8 0 1 0 10.7 10.7z"/></svg></span>
+      <span class="t t-auto">跟随系统</span><span class="t t-light">浅色</span><span class="t t-dark">深色</span>
+    </button>
+  </div>
+
+  <div class="cards">
+    <a class="card" href="游戏设计文档-小豆闯关记.html">
+      <span class="kind">横版闯关</span>
+      <h3>小豆闯关记</h3>
+      <p>十关、七种敌人、3 星评级。文档覆盖跑跳手感参数、体型与受伤规则、每关设计意图、十关数据表与调参影响。</p>
+      <div class="meta"><span class="pill">10 关</span><span class="pill">7 敌人</span><span class="pill">30 星</span></div>
+      <div class="go">打开文档 →</div>
+    </a>
+    <a class="card" href="游戏设计文档-植物大战僵尸.html">
+      <span class="kind">塔防策略</span>
+      <h3>植物大战僵尸</h3>
+      <p>九列五行、七种植物、六种僵尸。文档覆盖阳光经济、单位数值、波次预算公式、十关曲线与星级规则。</p>
+      <div class="meta"><span class="pill">10 关</span><span class="pill">7 植物</span><span class="pill">6 僵尸</span></div>
+      <div class="go">打开文档 →</div>
+    </a>
+    <a class="card" href="游戏设计文档-火柴人勇闯恶魔岛.html">
+      <span class="kind">俯视角生存动作</span>
+      <h3>火柴人勇闯恶魔岛</h3>
+      <p>五关、六种敌人加三精英、四个技能。文档覆盖自动锁敌口径、四技能数值、敌人 AI、波次节奏与性能取舍。</p>
+      <div class="meta"><span class="pill">5 关</span><span class="pill">6 敌人</span><span class="pill">4 技能</span></div>
+      <div class="go">打开文档 →</div>
+    </a>
+  </div>
+
+  <div class="note"><b>说明：</b>三款成品游戏均已补齐设计文档；火柴人这篇额外记录了「自动锁敌 + 四技能」的重做过程与按键方案取舍。文档为单文件 HTML，双击即可打开，不依赖服务器与外部库。</div>
+</div>
+
+<script>
+document.querySelector('[data-role="theme"]').addEventListener('click',function(){
+  var p=window.__theme.getPref();
+  window.__theme.set(p==='auto'?'light':p==='light'?'dark':'auto');
+});
+</script>
+</body>
+</html>
+
