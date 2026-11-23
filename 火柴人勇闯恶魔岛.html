@@ -18,7 +18,7 @@
     background:radial-gradient(circle at 50% 42%,#1b1020 0%,#0a0710 55%,#05040a 100%);}
   #app{position:relative;width:min(100vw,calc(100vh * 16 / 9));aspect-ratio:16/9;
     box-shadow:0 30px 90px rgba(0,0,0,.8),0 0 0 1px rgba(255,45,45,.14);}
-  canvas{display:block;width:100%;height:100%;background:#0b0812;cursor:crosshair;}
+  canvas{display:block;width:100%;height:100%;background:#0b0812;cursor:default;}
 
   /* ---------- 通用 ---------- */
   .hidden{display:none!important}
@@ -151,8 +151,8 @@
   #hud{position:absolute;inset:0;pointer-events:none;font-variant-numeric:tabular-nums}
   #hud button{pointer-events:auto}
   .hud-top{position:absolute;top:18px;left:22px;right:22px;display:flex;align-items:flex-start;gap:16px}
-  .level-info{background:rgba(10,7,16,.55);border:1px solid rgba(255,255,255,.1);border-radius:8px;
-    padding:8px 14px;backdrop-filter:blur(4px)}
+  .level-info{background:rgba(10,7,16,.78);border:1px solid rgba(255,255,255,.1);border-radius:8px;
+    padding:8px 14px}
   .lv-name{font-size:14px;font-weight:700;letter-spacing:.14em;color:#fff}
   .lv-wave{font-size:10.5px;letter-spacing:.18em;color:#ff8a6a;margin-top:2px}
   .boss-wrap{flex:1;max-width:520px;margin:0 auto;text-align:center;opacity:0;transform:translateY(-8px);
@@ -160,7 +160,7 @@
   .boss-wrap.on{opacity:1;transform:none}
   .boss-name{font-size:11.5px;letter-spacing:.34em;color:#ff5a4a;margin-bottom:5px;text-shadow:0 0 12px rgba(255,45,45,.6)}
   .boss-bar{height:9px;border-radius:6px;background:rgba(0,0,0,.6);border:1px solid rgba(255,90,90,.4);overflow:hidden}
-  .boss-fill{height:100%;width:100%;background:linear-gradient(90deg,#ff2d2d,#ff7a3c);transition:width .12s linear}
+  .boss-fill{height:100%;width:100%;background:linear-gradient(90deg,#ff2d2d,#ff7a3c)}
   .hud-right{margin-left:auto;display:flex;align-items:center;gap:12px}
   .combo{font-weight:900;font-style:italic;color:#fff;text-shadow:0 0 16px rgba(255,120,60,.75);
     display:flex;align-items:baseline;gap:4px;opacity:0;transform:scale(.8);transition:opacity .2s,transform .12s}
@@ -202,6 +202,10 @@
     font-size:15px;font-weight:900;color:#fff;text-shadow:0 1px 4px #000}
   .skill.cooling b{opacity:.22}
   .skill.cooling em{opacity:.25}
+  /* 大招大部分时间都在攒怒气：不能像普通冷却那样压到全黑，否则玩家看不清这个技能 */
+  .skill.ult.cooling b{opacity:.62}
+  .skill.ult.cooling i{color:rgba(255,255,255,.8)}
+  .skill.ult.cooling em{opacity:.7}
   .skill.ready{border-color:rgba(255,120,90,.65);box-shadow:0 6px 20px rgba(0,0,0,.5),0 0 18px rgba(255,60,40,.28)}
   .skill.ult{border-color:rgba(200,80,255,.5)}
   .skill.ult.ready{border-color:rgba(255,80,220,.9);box-shadow:0 0 26px rgba(255,60,220,.5);animation:ultPulse 1.1s infinite}
@@ -412,6 +416,16 @@ canvas.height = H * DPR;
 ctx.setTransform(DPR,0,0,DPR,0,0);
 ctx.lineCap = 'round';
 ctx.lineJoin = 'round';
+
+// 渲染倍率：帧率吃紧时自动降到 1.25，优先保证流畅
+let renderScale = DPR;
+function applyRenderScale(s){
+  renderScale = s;
+  canvas.width = Math.round(W * s);
+  canvas.height = Math.round(H * s);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+}
 
 const ARENA = { l: 46, r: W-46, t: 46, b: H-46 };
 
@@ -736,7 +750,7 @@ const LEVELS = [
     desc:'炸弹鬼靠近后会自爆，引到怪堆里能一次清场。',
     waves:[ {imp:8, bomber:2}, {imp:10, spitter:3, bomber:3}, {brute:3, imp:12, bomber:4}, {spitter:4, bomber:4, imp:14} ] },
   { name:'咒怨祭坛', sub:'盾卫与巫妖守着黑色祭坛', theme:'altar', par:155, boss:false, elite:'shaman',
-    desc:'盾卫正面免疫普攻，用 C 拉过来再打；巫妖必须优先解决。',
+    desc:'盾卫正面格挡普攻，绕到侧面或用技能破防；巫妖必须优先解决。',
     waves:[ {shield:3, imp:8}, {shaman:2, spitter:3, imp:10}, {shield:4, bomber:4, imp:12}, {shaman:3, brute:4, imp:14} ] },
   { name:'恶魔王座', sub:'魔王巴尔在此等候，最终决战', theme:'throne', par:230, boss:true, elite:null,
     desc:'全部魔物倾巢而出。击破炎狱魔王·巴尔，征服恶魔岛。',
@@ -758,7 +772,7 @@ const G = {
   spawnQueue:[], spawnT:0, pending:0,
   enemies:[], projectiles:[], particles:[], floats:[], effects:[], pickups:[],
   bossSpawned:false, bossDefeated:false,
-  shake:0, flash:0, hitStop:0, slow:1, slowT:0,
+  shake:0, shakeCur:0, shakePh:0, flash:0, hitStop:0, slow:1, slowT:0,
   stats:{ kills:0, maxCombo:0, dmgTaken:0, healed:0 },
   result:null, runId:0, rageHinted:false
 };
@@ -773,7 +787,8 @@ const player = {
   spdBuffT:0, zT:0, zHit:false, cT:0, cAngle:0, cHit:false,
   xJumpT:-1, xJumpDur:0.42, xFrom:null, xTo:null, xLanded:false,
   ultT:0, ultTick:0, ultTargets:0, ultHits:null, ultCount:0, ultDone:true,
-  slideT:-1, slideDur:0.2, slideFrom:null, slideTo:null, slideHit:false,
+  slideT:-1, slideDur:0.2, slideFrom:null, slideTo:null, slideHit:false, slideHitK:0.5, slideK:0, slideLen:0,
+  turn:1, swordA:null, moveBlend:0,
   target:null, cGrab:null, cTarget:null,
   rage:0, kills:0, healAcc:0,
   skill:{ z:{cd:0,max:5}, x:{cd:0,max:8}, c:{cd:0,max:9}, v:{cd:0,max:1} },
@@ -789,7 +804,8 @@ function resetPlayer(){
     dashT:0, dashCd:0, invuln:1.0, hurtT:0, dead:false,
     spdBuffT:0, zT:0, zHit:false, cT:0, cHit:false,
     xJumpT:-1, xLanded:false, ultT:0, ultTick:0, ultHits:null, ultCount:0, ultDone:true,
-    slideT:-1, slideHit:false, target:null, cGrab:null, cTarget:null,
+    slideT:-1, slideHit:false, slideK:0, target:null, cGrab:null, cTarget:null,
+    turn:1, swordA:null, moveBlend:0,
     rage:0, kills:0, healAcc:0,
     skill:{ z:{cd:0,max:5}, x:{cd:0,max:8}, c:{cd:0,max:9}, v:{cd:0,max:1} },
     trail:[]
@@ -802,6 +818,7 @@ function resetPlayer(){
    ========================================================= */
 function addParticle(x,y,o){
   o = o||{};
+  if(G.particles.length > 420) G.particles.shift();
   G.particles.push({
     x, y,
     vx: o.vx==null?rand(-120,120):o.vx,
@@ -823,6 +840,7 @@ function burst(x,y,n,color,spd,size){
   }
 }
 function addFloat(x,y,text,color,size,vy){
+  if(G.floats.length > 36) G.floats.shift();      // 限制上限，避免大招时文字过多拖慢渲染
   G.floats.push({ x, y, text, color:color||'#fff', size:size||18, life:0.85, max:0.85, vy:vy==null?-70:vy });
 }
 function addEffect(o){ G.effects.push(Object.assign({ t:0, dur:0.3, layer:1, type:'ring' }, o)); }
@@ -889,11 +907,10 @@ function hitEnemy(e, dmg, opts){
   addFloat(e.x + rand(-8,8), e.y - e.r - 18, String(shown), crit?'#ffd166':(opts.color||'#fff'), crit?22:16);
   burst(e.x, e.y - e.r*0.4, crit?8:4, crit?['#ffd166','#ff8a5a']:['#ff8a5a','#ff5a3c'], 170, 3);
   AudioSys.sfx(crit?'crit':'hit');
-  gainRage(opts.skill ? 5 : 4);
-  // 普攻不顿帧、不震屏，避免连续命中时产生卡顿感
+  if(!opts.noRage) gainRage(opts.skill ? 5 : 4);
+  // 普攻不顿帧、不震屏；技能命中只做极短顿帧，避免连续命中时产生卡顿感
   if(opts.skill && !opts.noStop){
-    G.hitStop = Math.max(G.hitStop, crit ? 0.03 : 0.015);
-    G.shake = Math.max(G.shake, crit ? 4 : 2);
+    G.hitStop = Math.max(G.hitStop, crit ? 0.02 : 0);
   }
   if(e.hp <= 0) killEnemy(e);
   return true;
@@ -911,11 +928,11 @@ function killEnemy(e){
     healPlayer(0.01, false);
     addFloat(player.x + rand(-16,16), player.y - 100, '+1%', '#7dffa8', 13, -55);
   }
-  gainRage(14);
+  // 大招期间击杀只回一半怒气，避免"大招清场 → 怒气瞬间回满 → 无脑连放大招"
+  gainRage(player.ultDone ? 14 : 7);
   burst(e.x, e.y - e.r*0.4, 14, [e.color, '#ff8a5a', '#3a0a0a'], 260, 4.5);
   ringFx(e.x, e.y, e.r*2.6, e.color, 0.3, 2);
   AudioSys.sfx('death');
-  G.shake = Math.max(G.shake, 5);
 
   // 掉落
   const roll = Math.random();
@@ -925,7 +942,7 @@ function killEnemy(e){
   if(e.boss){
     G.bossDefeated = true;
     G.slow = 0.22; G.slowT = 1.4;
-    G.shake = 26;
+    G.shake = 12;
     for(let i=0;i<5;i++) setTimeout(()=>{ burst(e.x+rand(-60,60), e.y+rand(-60,60), 22, ['#ffd166','#ff5a3c','#fff'], 420, 6); AudioSys.sfx('explode'); }, i*130);
     const rid = G.runId;
     setTimeout(()=>{ if(G.state==='playing' && G.runId===rid) victory(); }, 1900);
@@ -939,7 +956,7 @@ function hurtPlayer(dmg, sx, sy){
   player.invuln = 0.72;
   player.hurtT = 0.3;
   G.stats.dmgTaken += dmg;
-  G.shake = Math.max(G.shake, 6);
+  G.shake = Math.max(G.shake, 3.5);
   G.flash = 0.28;
   addFloat(player.x, player.y - 96, '-'+Math.round(dmg), '#ff4d4d', 22);
   burst(player.x, player.y - 50, 12, ['#ff2d2d','#ff8a5a'], 220, 4);
@@ -964,7 +981,7 @@ function playerDie(){
   if(player.cGrab){ for(const g of player.cGrab){ g.e.grabbed = 0; g.e.stun = 0.3; } player.cGrab = null; }
   player.cT = 0;
   G.slow = 0.25; G.slowT = 1.1;
-  G.shake = 20;
+  G.shake = 9;
   AudioSys.sfx('death');
   burst(player.x, player.y-40, 26, ['#ff2d2d','#fff','#ff8a5a'], 340, 5);
   const rid = G.runId;
@@ -994,30 +1011,32 @@ function basicAttack(target){
   p.aim = a;
   if(Math.abs(target.x - p.x) > 6) p.face = target.x > p.x ? 1 : -1;
 
-  // 纵向判定更宽：站在敌人上/下方也能砍到，不必走到同一水平线
+  // 判定区域：朝目标方向的扇形 + 竖向拉长的椭圆。
+  // 站在敌人的正上/下方也能直接砍中，不必先走到同一水平线。
   const reach = idx===2 ? 132 : 118;
   const dmg = idx===2 ? 22 : 13;
-  const arc = 1.45;
+  const arc = 1.5;
   slashFx(p.x + Math.cos(a)*38, p.y-42 + Math.sin(a)*38, a, reach, idx===2?'#ffd166':'#ffffff');
   AudioSys.sfx(idx===2?'slash2':'slash');
   let hitAny = false;
   for(const e of G.enemies){
     if(e.dead || e.spawnT>0) continue;
     const dx = e.x - p.x, dy = e.y - p.y;
-    const d = hyp(dx,dy);
-    if(d > reach + e.r) continue;
+    const R = reach + e.r;
+    const ex = dx / R, ey = dy / (R * 1.22);     // 纵向容错 +22%
+    if(ex*ex + ey*ey > 1) continue;
     const ang = Math.atan2(dy,dx);
     if(Math.abs(angDiff(a, ang)) > arc) continue;
-    // 椭圆判定：纵向容错更大
-    const ex = dx / (reach + e.r), ey = dy / ((reach + e.r) * 1.28);
-    if(ex*ex + ey*ey > 1) continue;
     const ok = hitEnemy(e, dmg, { kb: idx===2?330:150, ang, color:'#fff' });
     if(ok) hitAny = true;
   }
   if(hitAny) gainRage(3);
-  // 朝目标小步前冲
-  p.vx += Math.cos(a) * (idx===2 ? 130 : 55);
-  p.vy += Math.sin(a) * (idx===2 ? 130 : 55);
+  // 朝目标小步突进；目标略远时步子更大，自动贴身
+  const dist = hyp(target.x - p.x, target.y - p.y);
+  const gap = dist - (reach*0.72 + target.r);
+  const lunge = (idx===2 ? 150 : 70) + clamp(gap, 0, 70) * 3.5;
+  p.vx += Math.cos(a) * lunge;
+  p.vy += Math.sin(a) * lunge;
 }
 
 /* ---------- 闪避 ---------- */
@@ -1055,8 +1074,8 @@ function zImpact(){
     slashFx(player.x + Math.cos(a)*R*0.55, player.y-40 + Math.sin(a)*R*0.55, a+Math.PI/2, 70, '#ff8a5a');
   }
   burst(player.x, player.y-40, 22, ['#ff5a3c','#ffd166','#fff'], 320, 4);
-  G.shake = Math.max(G.shake, 6);
-  G.hitStop = Math.max(G.hitStop, 0.045);
+  G.shake = Math.max(G.shake, 3);
+  G.hitStop = 0;
   AudioSys.sfx('land');
   for(const e of G.enemies){
     if(e.dead) continue;
@@ -1098,8 +1117,8 @@ function castX(){
 function xLand(){
   const x = player.x, y = player.y;
   const R = 178, dmg = 78;
-  G.shake = 9;
-  G.hitStop = Math.max(G.hitStop, 0.045);
+  G.shake = 5;
+  G.hitStop = 0.03;
   AudioSys.sfx('land');
   ringFx(x, y, R, '#ffd166', 0.45, 7);
   ringFx(x, y, R*0.6, '#ff6a2a', 0.3, 4);
@@ -1199,8 +1218,8 @@ function cImpact(ip){
     e.grabbed = 0; e.stun = 1.1;
   }
   AudioSys.sfx('land');
-  G.hitStop = Math.max(G.hitStop, 0.05);
-  G.shake = Math.max(G.shake, 7);
+  G.hitStop = 0.03;
+  G.shake = Math.max(G.shake, 4);
   ringFx(ip.x, ip.y, R, '#ff5ad6', 0.45, 7);
   ringFx(ip.x, ip.y, R*0.55, '#ffd166', 0.3, 4);
   burst(ip.x, ip.y-10, 34, ['#ff5ad6','#ffd166','#fff'], 520, 5);
@@ -1232,69 +1251,81 @@ function cImpact(ip){
 }
 
 /* ---------- V 千影·滑斩：穿过敌人向前滑斩，接连斩下一个 ---------- */
+const ULT_TIME = 2.8;
 function castV(){
   if(G.state!=='playing') return;
   const p = player;
   if(p.rage < 100 || p.ultT > 0 || p.dead || p.xJumpT>=0 || p.cT>0 || p.slideT>=0) return;
   p.rage = 0;
-  p.ultT = 2.8;
+  p.ultT = ULT_TIME;
   p.ultTick = 0;
   p.ultHits = new Map();
   p.ultCount = 0;
   p.ultDone = false;
-  G.slow = 0.45; G.slowT = 0.14;
-  p.invuln = Math.max(p.invuln, 3.1);
-  G.flash = 0.3;
+  G.slow = 0.5; G.slowT = 0.12;
+  p.invuln = Math.max(p.invuln, ULT_TIME + 0.35);
   AudioSys.sfx('ult');
   banner('千影 · 滑斩', 'OMEGA · 千影连斩');
-  ringFx(p.x, p.y-40, 190, '#ff2d6a', 0.45, 5);
+  ringFx(p.x, p.y-40, 170, '#ff2d6a', 0.4, 4);
+  burst(p.x, p.y-40, 14, ['#ff2d6a','#fff'], 380, 4);
+}
+// 滑行速度曲线：近似匀速，只在首尾各 18% 缓入缓出，保证连斩之间速度不断档
+function slideEase(k){
+  const e = 0.18;
+  if(k < e) return (k*k/(2*e)) / (1-e);
+  if(k < 1-e) return (e/2 + (k-e)) / (1-e);
+  const u = 1-k;
+  return 1 - (u*u/(2*e)) / (1-e);
 }
 function ultStep(){
   const p = player;
-  // 下一个目标：优先没斩过的；每个单位最多被斩 2 次
-  let best = null, bd = 1e9;
+  // 下一个目标：先斩没砍过的，再回头补刀；普通怪最多 2 次，Boss 8 次
+  let best = null, bk = Infinity;
   for(const e of G.enemies){
-    if(e.dead || e.spawnT>0) continue;
-    if((p.ultHits.get(e)||0) >= 2) continue;
-    const d = hyp(e.x-p.x, e.y-p.y);
-    if(d < bd){ bd = d; best = e; }
+    if(e.dead || e.spawnT>0 || e.grabbed) continue;
+    const n = p.ultHits.get(e)||0;
+    if(n >= (e.boss ? 8 : 2)) continue;
+    const key = (n>0 ? 1e5 : 0) + hyp(e.x-p.x, e.y-p.y);
+    if(key < bk){ bk = key; best = e; }
   }
   if(!best){
     p.ultT = 0; p.ultDone = true; ultEnd(); return;
   }
-  const a = Math.atan2(best.y-p.y, best.x-p.x);
+  const bd = hyp(best.x-p.x, best.y-p.y);
+  const a = bd > 14 ? Math.atan2(best.y-p.y, best.x-p.x) : (p.ultAim == null ? p.aim : p.ultAim);
   const sx = p.x, sy = p.y;
-  const total = bd + 175;   // 穿过目标后继续滑行
+  const total = Math.max(bd, 36) + (best.boss ? 150 : 175);   // 穿过目标后继续滑行
   const ex = clamp(sx + Math.cos(a)*total, ARENA.l+14, ARENA.r-14);
   const ey = clamp(sy + Math.sin(a)*total, ARENA.t+14, ARENA.b-14);
+  const len = hyp(ex-sx, ey-sy);
   p.slideFrom = { x:sx, y:sy };
   p.slideTo = { x:ex, y:ey };
-  p.slideDur = clamp(hyp(ex-sx, ey-sy) / 1800, 0.11, 0.3);
+  p.slideLen = len;
+  p.slideDur = clamp(len / 1750, 0.12, 0.36);
   p.slideT = 0;
+  p.slideK = 0;
   p.slideHit = false;
+  p.slideHitK = clamp(bd / Math.max(len, 1), 0.2, 0.95);   // 身体掠过目标的那一刻出剑
   p.slideGhostT = 0;
   p.ultAim = a;
   p.face = Math.cos(a) >= 0 ? 1 : -1;
   p.aim = a;
-  addEffect({ type:'streak', x1:sx, y1:sy-40, x2:ex, y2:ey-40, color:'#ff2d6a', dur:0.28, layer:1 });
 }
 function slideStrike(){
   const p = player;
   const a = p.ultAim;
-  const x1 = p.slideFrom.x, y1 = p.slideFrom.y, x2 = p.slideTo.x, y2 = p.slideTo.y;
+  const x1 = p.slideFrom.x, y1 = p.slideFrom.y, x2 = p.x, y2 = p.y;
   AudioSys.sfx('slash2');
-  slashFx(p.x + Math.cos(a)*48, p.y-42 + Math.sin(a)*48, a, 150, '#ff4d8a');
-  slashFx(p.x + Math.cos(a)*10, p.y-42 + Math.sin(a)*10, a + 0.5, 110, '#ffffff');
+  slashFx(p.x + Math.cos(a)*40, p.y-42 + Math.sin(a)*40, a, 150, '#ff4d8a');
+  slashFx(p.x, p.y-42, a + 0.6, 120, '#ffffff');
   const dx = x2-x1, dy = y2-y1, l2 = dx*dx+dy*dy || 1;
-  let hits = 0;
   for(const e of G.enemies){
     if(e.dead || e.spawnT>0) continue;
     let t = ((e.x-x1)*dx + (e.y-y1)*dy)/l2; t = clamp(t, 0, 1);
-    if(hyp(e.x-(x1+dx*t), e.y-(y1+dy*t)) < 60 + e.r){
+    if(hyp(e.x-(x1+dx*t), e.y-(y1+dy*t)) < 62 + e.r){
       const n = p.ultHits.get(e)||0;
       p.ultHits.set(e, n+1);
-      hitEnemy(e, n===0 ? 64 : 40, { skill:true, color:'#ff5ad6', crit:true, kb:140, ang:a, pierce:true, noStop:true });
-      hits++;
+      hitEnemy(e, n===0 ? 64 : 40, { skill:true, color:'#ff5ad6', crit:true, kb:120, ang:a, pierce:true, noStop:true, noRage:true });
     }
   }
   p.ultCount++;
@@ -1303,8 +1334,9 @@ function ultEnd(){
   const p = player;
   const R = 230;
   p.ultT = 0;
-  G.hitStop = Math.max(G.hitStop, 0.05);
-  G.slow = 0.3; G.slowT = 0.22;
+  // 收尾只用轻微慢放，不震屏、不顿帧
+  G.hitStop = 0;
+  G.slow = 0.55; G.slowT = 0.18;
   AudioSys.sfx('explode');
   ringFx(p.x, p.y-40, R, '#ff2d6a', 0.5, 7);
   ringFx(p.x, p.y-40, R*0.6, '#ffd166', 0.36, 4);
@@ -1315,7 +1347,7 @@ function ultEnd(){
   }
   for(const e of G.enemies){
     if(e.dead) continue;
-    if(hyp(e.x-p.x, e.y-p.y) < R + e.r) hitEnemy(e, 72, { skill:true, color:'#ffd166', crit:true, kb:560, ang:Math.atan2(e.y-p.y, e.x-p.x), pierce:true });
+    if(hyp(e.x-p.x, e.y-p.y) < R + e.r) hitEnemy(e, 72, { skill:true, color:'#ffd166', crit:true, kb:560, ang:Math.atan2(e.y-p.y, e.x-p.x), pierce:true, noStop:true, noRage:true });
   }
   addFloat(p.x, p.y-134, `连斩 ×${p.ultCount}`, '#ffd166', 20);
 }
@@ -1323,6 +1355,41 @@ function ultEnd(){
 /* =========================================================
    10. 玩家更新
    ========================================================= */
+/* ---------- 姿态 / 剑角度 / 剑尖位置 ---------- */
+function playerPose(p){
+  if(p.dead) return 'dead';
+  if(p.xJumpT >= 0) return 'jump';
+  if(p.slideT >= 0) return 'slide';
+  if(p.cT > 0) return 'cast';
+  if(p.attackAnim > 0) return 'attack';
+  if(p.moving || p.moveBlend > 0.45) return 'run';
+  return 'idle';
+}
+// 返回“本地坐标”下的剑的角度（已考虑左右镜像）
+function swordAngleOf(p, pose, atkP){
+  const localAim = p.face === 1 ? p.aim : Math.PI - p.aim;
+  if(pose === 'attack'){
+    const swing = easeOut(clamp(atkP/0.7, 0, 1));
+    // 奇偶段交替上撩/下劈，三段连击看起来更有节奏
+    return p.comboIdx % 2 ? localAim + lerp(0.9, -1.6, swing) : localAim + lerp(-1.5, 0.75, swing);
+  }
+  if(pose === 'slide') return localAim + lerp(1.15, -1.15, p.slideK || 0);   // 滑斩：剑横扫过去
+  if(pose === 'cast') return -Math.PI/2 - 0.35;
+  if(pose === 'jump') return localAim + 1.2;
+  return localAim + Math.sin(G.time*2.2)*0.06 + 0.5;
+}
+// 剑尖在世界坐标中的位置（与 drawStickman 的变换保持一致，用于画剑光轨迹）
+function swordTipWorld(p, pose, ang){
+  const S = 1.34;
+  const blend = pose==='run' ? 1 : (pose==='slide' ? 1 : (p.moveBlend||0));
+  const lean = 0.10*blend + (pose==='slide' ? 0.24 : 0);
+  const lx = Math.cos(ang)*81, ly = -59 + Math.sin(ang)*81;
+  const c = Math.cos(lean), s = Math.sin(lean);
+  const rx = lx*c - ly*s, ry = lx*s + ly*c;
+  const turn = Math.abs(p.turn) < 0.08 ? (p.turn < 0 ? -0.08 : 0.08) : p.turn;
+  return { x: p.x + rx*S*turn, y: p.y - (p.jumpZ||0) + ry*S };
+}
+
 function updatePlayer(dt){
   const p = player;
   p.invuln = Math.max(0, p.invuln - dt);
@@ -1333,18 +1400,14 @@ function updatePlayer(dt){
   p.spdBuffT = Math.max(0, p.spdBuffT - dt);
   for(const k in p.skill){ p.skill[k].cd = Math.max(0, p.skill[k].cd - dt); }
   p.cT = Math.max(0, p.cT - dt);
-  if(p.dead){
-    // 倒地后飘带落在地上
-    ribbon.update(dt, p.x - p.face*92, p.y - 12, 0, 0);
-    return;
-  }
 
   // 锁定最近敌人
-  p.target = findTarget(330);
-  p.aim = aimAngle();
+  p.target = p.dead ? null : findTarget(330);
+  if(!p.dead) p.aim = aimAngle();
 
-  // 转身：带 7px 滞后，避免在敌人正上/下方来回抖动
-  if(p.cT <= 0 && p.ultT <= 0 && p.slideT < 0){
+  // 朝向：目标越过 7px 滞回区才转身，避免在敌人正上/下方来回抽动
+  const busy = p.cT > 0 || !p.ultDone;
+  if(!busy && !p.dead){
     let wantFace = p.face;
     if(p.target){
       if(p.target.x > p.x + 7) wantFace = 1;
@@ -1354,6 +1417,17 @@ function updatePlayer(dt){
     }
     p.face = wantFace;
   }
+  // 转身动画：不是瞬间镜像翻转，而是平滑压扁再展开
+  if(Math.abs(p.face - p.turn) < 0.03) p.turn = p.face;
+  else p.turn += (p.face - p.turn) * (1 - Math.pow(!p.ultDone ? 1e-9 : 2e-4, Math.max(dt, 1e-4)));
+
+  if(p.dead){
+    // 倒地后飘带落在地上
+    p.pose = 'dead';
+    p.moving = false;
+    ribbon.update(dt, p.x - p.turn*92, p.y - 12, 0, 0);
+    return;
+  }
 
   // 输入
   let ix = (keys['d']||keys['arrowright']?1:0) - (keys['a']||keys['arrowleft']?1:0);
@@ -1362,7 +1436,7 @@ function updatePlayer(dt){
   if(il > 0){ ix/=il; iy/=il; }
   p.moving = il > 0;
   // 跑/走姿态平滑过渡，避免 idle ↔ run 硬切
-  p.moveBlend = lerp(p.moveBlend||0, p.moving ? 1 : 0, 1 - Math.pow(0.00002, dt));
+  p.moveBlend = lerp(p.moveBlend||0, p.moving ? 1 : 0, 1 - Math.pow(0.00002, Math.max(dt, 1e-4)));
 
   // Z
   if(p.zT > 0){
@@ -1374,20 +1448,15 @@ function updatePlayer(dt){
   if(p.slideT >= 0){
     p.slideT += dt;
     const k = clamp(p.slideT / p.slideDur, 0, 1);
-    const e = easeOut(k);
+    const e = slideEase(k);
     const nx = lerp(p.slideFrom.x, p.slideTo.x, e);
     const ny = lerp(p.slideFrom.y, p.slideTo.y, e);
     p.vx = (nx - p.x) / Math.max(dt, 1e-4);
     p.vy = (ny - p.y) / Math.max(dt, 1e-4);
     p.x = nx; p.y = ny;
+    p.slideK = k;
     p.walk += 30 * dt;
-    // 残影
-    p.slideGhostT -= dt;
-    if(p.slideGhostT <= 0){
-      p.slideGhostT = 0.028;
-      addEffect({ type:'ghost', x:p.x, y:p.y, dur:0.34, layer:1, face:p.face, aim:p.ultAim, pose:'slide' });
-    }
-    if(p.ultT > 0 && !p.slideHit && k >= 0.42){ p.slideHit = true; slideStrike(); }
+    if(p.ultT > 0 && !p.slideHit && k >= p.slideHitK){ p.slideHit = true; slideStrike(); }
     if(k >= 1){ p.slideT = -1; p.vx = 0; p.vy = 0; }
   }
   // X 跳跃
@@ -1406,7 +1475,7 @@ function updatePlayer(dt){
   } else {
     p.jumpZ = 0;
     // 移动
-    const spd = p.speed * (p.spdBuffT > 0 ? 1.5 : 1) * (p.ultT > 0 ? 1.15 : 1);
+    const spd = p.speed * (p.spdBuffT > 0 ? 1.5 : 1);
     if(p.dashT > 0){
       p.dashT -= dt;
       p.vx = p.dashDirX * 980;
@@ -1432,10 +1501,12 @@ function updatePlayer(dt){
     p.walk += sp * dt * 0.045;
   }
 
-  // 自动普攻：锁定的敌人进入攻击距离后自动挥砍
-  if(p.target && !p.target.dead && p.attackCd <= 0 && p.xJumpT < 0 && p.ultT <= 0 && p.cT <= 0 && p.slideT < 0
-     && hyp(p.target.x-p.x, p.target.y-p.y) < 124 + p.target.r){
-    basicAttack(p.target);
+  // 自动普攻：锁定的敌人进入攻击距离后自动挥砍。
+  // 触发范围是竖向更长的椭圆——站在敌人上/下方也能直接出手。
+  if(p.target && !p.target.dead && p.attackCd <= 0 && p.xJumpT < 0 && p.ultDone && p.cT <= 0 && p.slideT < 0){
+    const tdx = p.target.x - p.x, tdy = p.target.y - p.y;
+    const rr = 124 + p.target.r;
+    if((tdx*tdx)/(rr*rr) + (tdy*tdy)/((rr*1.22)*(rr*1.22)) < 1) basicAttack(p.target);
   }
 
   // C 抓取动画
@@ -1455,8 +1526,34 @@ function updatePlayer(dt){
     }
   }
 
+  // ---- 姿态、剑的角度、剑尖轨迹 ----
+  const pose = playerPose(p);
+  const atkP = p.attackAnim > 0 ? 1 - p.attackAnim/(p.attackDur||0.3) : 0;
+  const wantA = swordAngleOf(p, pose, atkP);
+  if(p.swordA == null || pose === 'dead') p.swordA = wantA;
+  else {
+    // 剑以不同速率跟随目标角度：出招快、收招慢，待机↔出招之间不再硬切
+    const rate = pose==='slide' ? 1e-12 : pose==='attack' ? 1e-7 : 3e-4;
+    p.swordA += angDiff(p.swordA, wantA) * (1 - Math.pow(rate, Math.max(dt, 1e-4)));
+  }
+  p.pose = pose;
+
+  // 残影（滑行时每隔约 22ms 留一道）
+  if(pose === 'slide'){
+    p.slideGhostT = (p.slideGhostT || 0) - dt;
+    if(p.slideGhostT <= 0){
+      p.slideGhostT = 0.022;
+      addEffect({ type:'ghost', x:p.x, y:p.y, dur:0.36, layer:1, face:p.face, aim:p.aim, pose:'slide', swordA:p.swordA, blend:1 });
+    }
+  }
+
+  // 剑尖轨迹：只有挥砍/滑斩时才会连成可见的剑光
+  const tip = swordTipWorld(p, pose, p.swordA);
+  p.trail.push({ x:tip.x, y:tip.y, t:G.time, hot: pose==='slide' ? 2 : (pose==='attack' ? 1 : 0) });
+  if(p.trail.length > 18) p.trail.shift();
+
   // 飘带
-  ribbon.update(dt, p.x - p.face*13, p.y - 103 - (p.jumpZ||0), p.vx, p.vy);
+  ribbon.update(dt, p.x - p.turn*13, p.y - 103 - (p.jumpZ||0), p.vx, p.vy);
 }
 
 /* =========================================================
@@ -1630,8 +1727,8 @@ function updateEnemies(dt){
             if(player.healAcc >= 1){ player.healAcc -= 1; healPlayer(0.01, false); }
             ringFx(e.x, e.y-10, R, '#ffb020', 0.4, 6);
             burst(e.x, e.y-10, 26, ['#ffd166','#ff6a2a','#2a2a3a'], 420, 5);
-            G.shake = Math.max(G.shake, 14);
-            G.hitStop = Math.max(G.hitStop, 0.05);
+            G.shake = Math.max(G.shake, 6);
+            G.hitStop = 0.03;
             AudioSys.sfx('explode');
             if(hyp(p.x-e.x, p.y-e.y) < R + p.r) hurtPlayer(e.dmg, e.x, e.y);
             for(const o of G.enemies){
@@ -1689,7 +1786,7 @@ function updateEnemies(dt){
   }
 
   // 分离
-  const alive = G.enemies.filter(e=>!e.dead && e.spawnT<=0);
+  const alive = G.enemies.filter(e=>!e.dead && e.spawnT<=0 && !e.grabbed);
   for(let i=0;i<alive.length;i++){
     for(let j=i+1;j<alive.length;j++){
       const a = alive[i], b = alive[j];
@@ -1715,8 +1812,8 @@ function updateBoss(b, dt){
   b.phase = hpRatio > 0.62 ? 1 : hpRatio > 0.3 ? 2 : 3;
   if(b.phase !== b.lastPhase){
     b.lastPhase = b.phase;
-    if(b.phase === 2){ banner('魔王 · 狂怒', 'PHASE 2'); G.shake = Math.max(G.shake, 14); AudioSys.sfx('boss'); }
-    if(b.phase === 3){ banner('魔王 · 焚尽', 'PHASE 3'); G.shake = 22; AudioSys.sfx('boss'); }
+    if(b.phase === 2){ banner('魔王 · 狂怒', 'PHASE 2'); G.shake = Math.max(G.shake, 6); AudioSys.sfx('boss'); }
+    if(b.phase === 3){ banner('魔王 · 焚尽', 'PHASE 3'); G.shake = 10; AudioSys.sfx('boss'); }
   }
   b.cd -= dt;
   b.t -= dt;
@@ -1753,7 +1850,7 @@ function updateBoss(b, dt){
         const tx = b.targetX, ty = b.targetY;
         ringFx(tx, ty, R, '#ff5a3c', 0.4, 7);
         burst(tx, ty-10, 18, ['#ff6a2a','#ffd166','#3a0a0a'], 380, 5);
-        G.shake = Math.max(G.shake, 13);
+        G.shake = Math.max(G.shake, 6);
         AudioSys.sfx('explode');
         if(hyp(p.x-tx, p.y-ty) < R + p.r) hurtPlayer(b.dmg, tx, ty);
         b.attackCount++;
@@ -1787,7 +1884,7 @@ function updateBoss(b, dt){
       addParticle(b.x+rand(-20,20), b.y-rand(0,60), { vx:rand(-60,60), vy:rand(-60,60), color:'#ff5a3c', size:rand(3,6), life:0.4, g:0 });
       if(b.t <= 0 || b.x < ARENA.l+40 || b.x > ARENA.r-40 || b.y < ARENA.t+40 || b.y > ARENA.b-40){
         b.state='idle'; b.cd = b.phase===3?0.8:1.5;
-        G.shake = Math.max(G.shake, 10);
+        G.shake = Math.max(G.shake, 5);
         burst(b.x, b.y-10, 16, ['#ff6a2a','#3a0a0a'], 300, 5);
       }
       break;
@@ -1937,7 +2034,7 @@ function startLevel(idx){
   G.bossSpawned = false;
   G.bossDefeated = false;
   G.eliteSpawned = false;
-  G.shake = 0; G.flash = 0; G.hitStop = 0; G.slow = 1; G.slowT = 0;
+  G.shake = 0; G.shakeCur = 0; G.shakePh = 0; G.flash = 0; G.hitStop = 0; G.slow = 1; G.slowT = 0;
   G.stats = { kills:0, maxCombo:0, dmgTaken:0, healed:0 };
   G.result = null;
   G.runId++;
@@ -2056,7 +2153,7 @@ function spawnBoss(){
   document.getElementById('bossWrap').classList.add('on');
   document.getElementById('bossName').textContent = '炎狱魔王 · 巴尔';
   AudioSys.sfx('boss');
-  G.shake = 16;
+  G.shake = 8;
 }
 
 function victory(){
@@ -2298,6 +2395,9 @@ function drawShadow(x,y,r){
 function drawStickman(px, py, o){
   o = o || {};
   const face = o.face || 1;
+  // turn 在 -1 ↔ 1 之间平滑过渡：转身时先压扁再展开，而不是瞬间镜像
+  const turn = o.turn == null ? face : o.turn;
+  const sx = Math.abs(turn) < 0.08 ? (turn < 0 ? -0.08 : 0.08) : turn;
   const walk = o.walk || 0;
   const pose = o.pose || 'idle';
   const atk = o.atk || 0;
@@ -2312,7 +2412,7 @@ function drawStickman(px, py, o){
   ctx.globalAlpha = alpha;
   ctx.translate(px, y);
   if(pose === 'dead'){ ctx.rotate(-1.42); ctx.translate(0, -4); }
-  ctx.scale(face * S, S);
+  ctx.scale(sx * S, S);
 
   const lw = 4.6;
   const flat = !!o.flat;   // 残影：不使用 shadowBlur
@@ -2321,7 +2421,7 @@ function drawStickman(px, py, o){
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.shadowColor = 'rgba(0,0,0,.8)';
-  ctx.shadowBlur = flat ? 0 : 7;
+  ctx.shadowBlur = 0;      // 肢体描边不做模糊：每帧多次 blur 是掉帧来源
 
   const blend = o.blend == null ? (pose==='run'?1:0) : o.blend;
   const bob = pose==='run' ? Math.abs(Math.sin(walk))*2.6*(0.3+0.7*blend) : Math.sin(G.time*2.2)*1.5*(1-blend*0.5);
@@ -2341,7 +2441,11 @@ function drawStickman(px, py, o){
   const footL = [16*s1*legAmp, -1 - Math.max(0, s1)*legAmp*9];
   const kneeR = [9*s2*legAmp, hipY + 19 - Math.abs(s2)*legAmp*4];
   const footR = [16*s2*legAmp, -1 - Math.max(0, s2)*legAmp*9];
-  if(pose==='jump'){
+  if(pose==='slide'){
+    // 滑斩：前腿前探、后腿后拖，像贴地滑行
+    ctx.beginPath(); ctx.moveTo(0,hipY); ctx.lineTo(14,hipY+9); ctx.lineTo(23,hipY+1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,hipY); ctx.lineTo(-10,hipY+14); ctx.lineTo(-27,hipY+19); ctx.stroke();
+  } else if(pose==='jump'){
     ctx.beginPath(); ctx.moveTo(0,hipY); ctx.lineTo(11,hipY+13); ctx.lineTo(5,hipY+21); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0,hipY); ctx.lineTo(-11,hipY+13); ctx.lineTo(-5,hipY+21); ctx.stroke();
   } else {
@@ -2374,7 +2478,8 @@ function drawStickman(px, py, o){
 
   // 前手 + 剑（统一在本地坐标内，避免重复变换）
   const localAim = face === 1 ? aim : Math.PI - aim;
-  let swordAng;
+  let swordAng = o.swordA;
+  if(swordAng == null){
   if(pose==='attack'){
     const swing = easeOut(clamp(atk/0.7,0,1));
     // 奇偶段交替上撩/下劈，三段连击看起来更有节奏
@@ -2390,13 +2495,13 @@ function drawStickman(px, py, o){
   } else {
     swordAng = localAim + Math.sin(G.time*2.2)*0.06 + 0.5;
   }
+  }
   const shX = 0, shY = neckY + 3;
   const handX = shX + Math.cos(swordAng)*27;
   const handY = shY + Math.sin(swordAng)*27;
   ctx.strokeStyle = col;
   ctx.lineWidth = lw;
-  ctx.shadowColor = 'rgba(0,0,0,.8)';
-  ctx.shadowBlur = flat ? 0 : 7;
+  ctx.shadowBlur = 0;
   ctx.beginPath();
   ctx.moveTo(shX, shY);
   ctx.lineTo(lerp(shX,handX,0.5) + Math.cos(swordAng+1.4)*4, lerp(shY,handY,0.5) + Math.sin(swordAng+1.4)*4);
@@ -2433,6 +2538,44 @@ function drawStickman(px, py, o){
   ctx.restore();
 }
 
+/* 剑尖轨迹：把最近 0.17s 的剑尖位置连成由粗到细的光带，只在挥砍/滑斩时可见 */
+function drawSwordTrail(p){
+  const n = p.trail.length;
+  if(n < 3) return;
+  const now = G.time, LIFE = 0.17;
+  const pts = [];
+  for(let i=n-1; i>=0; i--){
+    const q = p.trail[i];
+    if(now - q.t > LIFE) break;
+    pts.push(q);
+  }
+  if(pts.length < 3) return;
+  pts.reverse();
+  let len = 0, hot = 0;
+  for(let i=1;i<pts.length;i++){
+    len += hyp(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y);
+    hot = Math.max(hot, pts[i].hot);
+  }
+  if(len < 46 || hot === 0) return;       // 待机时剑尖几乎不动，不画
+  const col = hot >= 2 ? '#ff2d6a' : (p.comboIdx === 2 ? '#ffd166' : '#ffffff');
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for(let i=1;i<pts.length;i++){
+    const k = clamp(1 - (now - pts[i].t)/LIFE, 0, 1);
+    ctx.strokeStyle = col;
+    ctx.globalAlpha = k*k * (hot >= 2 ? 0.42 : 0.3);
+    ctx.lineWidth = (hot >= 2 ? 13 : 9) * k;
+    ctx.beginPath(); ctx.moveTo(pts[i-1].x, pts[i-1].y); ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
+    ctx.strokeStyle = '#ffffff';
+    ctx.globalAlpha = k*k*k * 0.75;
+    ctx.lineWidth = (hot >= 2 ? 3.4 : 2.2) * k;
+    ctx.beginPath(); ctx.moveTo(pts[i-1].x, pts[i-1].y); ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawPlayer(){
   const p = player;
   drawShadow(p.x, p.y, p.r+8);
@@ -2440,7 +2583,7 @@ function drawPlayer(){
   // 飘带
   drawRibbonPath(ribbon.pts, 13.5, true);
   // 结
-  const knotX = p.dead ? p.x - p.face*92 : p.x - p.face*13;
+  const knotX = p.dead ? p.x - p.turn*92 : p.x - p.turn*13;
   const knotY = p.dead ? p.y - 12 : p.y - 103 - (p.jumpZ||0);
   ctx.save();
   ctx.shadowColor = 'rgba(255,45,45,.9)'; ctx.shadowBlur = 12;
@@ -2448,21 +2591,16 @@ function drawPlayer(){
   ctx.beginPath(); ctx.arc(knotX, knotY, 4.8, 0, TAU); ctx.fill();
   ctx.restore();
 
-  let pose = 'idle';
-  if(p.dead) pose = 'dead';
-  else if(p.xJumpT >= 0) pose = 'jump';
-  else if(p.slideT >= 0) pose = 'slide';
-  else if(p.cT > 0) pose = 'cast';
-  else if(p.attackAnim > 0) pose = 'attack';
-  else if(p.moving) pose = 'run';
+  const pose = p.pose || playerPose(p);
 
-  const atkP = p.attackAnim > 0 ? 1 - p.attackAnim/(p.attackDur||0.3) : (p.slideT >= 0 ? 1 : 0);
+  const atkP = p.attackAnim > 0 ? 1 - p.attackAnim/(p.attackDur||0.3) : 0;
   let col;
+  let bodyAlpha = 1;
   if(p.hurtT > 0) col = '#ff8a7a';
   else if(!p.ultDone) col = '#ffe3ec';
   else if(p.invuln > 0 && p.dashT <= 0 && !p.dead){
     // 受伤无敌：平滑呼吸式半透明，而不是硬切闪烁
-    ctx.globalAlpha = 0.62 + 0.3 * Math.sin(G.time * 26);
+    bodyAlpha = 0.66 + 0.28 * Math.sin(G.time * 22);
     col = '#f6f1e6';
   } else col = '#f6f1e6';
 
@@ -2483,9 +2621,30 @@ function drawPlayer(){
     ctx.restore();
   }
 
+  // 滑行时身后的冲刺流光
+  if(p.slideT >= 0 && !p.dead){
+    const a = p.ultAim;
+    const L = Math.min(p.slideLen || 190, 190);
+    const bx = p.x - Math.cos(a)*L, by = p.y - Math.sin(a)*L;
+    const dg = ctx.createLinearGradient(bx, by-40, p.x, p.y-40);
+    dg.addColorStop(0, 'rgba(255,45,106,0)');
+    dg.addColorStop(1, 'rgba(255,45,106,.6)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = dg;
+    ctx.globalAlpha = 0.3; ctx.lineWidth = 34;
+    ctx.beginPath(); ctx.moveTo(bx, by-40); ctx.lineTo(p.x, p.y-40); ctx.stroke();
+    ctx.globalAlpha = 0.85; ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(bx, by-40); ctx.lineTo(p.x, p.y-40); ctx.stroke();
+    ctx.restore();
+  }
+  // 剑光轨迹
+  drawSwordTrail(p);
+
   drawStickman(p.x, p.y, {
-    face: p.face, walk: p.walk, pose, atk: atkP, aim: p.aim,
-    jumpZ: p.jumpZ||0, color: col, blend: p.moveBlend||0, alt: p.comboIdx % 2
+    face: p.face, turn: p.turn, walk: p.walk, pose, atk: atkP, aim: p.aim, swordA: p.swordA,
+    jumpZ: p.jumpZ||0, color: col, blend: p.moveBlend||0, alt: p.comboIdx % 2, alpha: bodyAlpha
   });
   ctx.globalAlpha = 1;
 
@@ -2971,7 +3130,7 @@ function drawEffects(layer){
     }
     else if(e.type === 'ghost'){
       ctx.globalAlpha = a*0.45;
-      drawStickman(e.x, e.y, { face:e.face||1, aim:e.aim||0, pose:e.pose||'attack', atk:1, color:'#ff4d8a', flat:true });
+      drawStickman(e.x, e.y, { face:e.face||1, aim:e.aim||0, pose:e.pose||'attack', atk:1, color:'#ff4d8a', flat:true, swordA:e.swordA, blend:e.blend==null?0:e.blend, alpha:a*0.45 });
     }
     ctx.restore();
   }
@@ -3120,7 +3279,7 @@ function drawMenuScene(dt){
 
 /* ---------- 主渲染 ---------- */
 function render(dt){
-  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.setTransform(renderScale,0,0,renderScale,0,0);
   ctx.clearRect(0,0,W,H);
 
   if(G.state==='title' || G.state==='select' || G.state==='help'){
@@ -3128,11 +3287,12 @@ function render(dt){
     return;
   }
 
-  // 震屏
+  // 震屏：平滑的正弦衰减。逐帧随机偏移会让人眼读成"卡顿"
   let sx = 0, sy = 0;
-  if(G.shake > 0.1){
-    const s = G.shake;
-    sx = rand(-s,s); sy = rand(-s,s);
+  if(G.shakeCur > 0.05){
+    const s = G.shakeCur;
+    sx = Math.sin(G.shakePh) * s;
+    sy = Math.cos(G.shakePh * 0.83) * s * 0.7;
   }
   ctx.save();
   ctx.translate(sx, sy);
@@ -3223,6 +3383,8 @@ function render(dt){
 let lastT = performance.now();
 let comboT = 0;
 G.combo = 0;
+// 自适应渲染倍率：开局几秒实测帧耗时，吃紧就把内部分辨率降到 1.25 倍
+let perfAcc = 0, perfN = 0, perfChecked = false;
 
 function frame(now){
   requestAnimationFrame(frame);
@@ -3230,8 +3392,17 @@ function frame(now){
   lastT = now;
 
   G.time += raw * (G.state==='playing' ? G.slow : 1);
+  G.shakePh += raw * TAU * 9;
+  G.shakeCur = lerp(G.shakeCur, G.shake, 1 - Math.pow(0.00002, raw));
 
   if(G.state === 'playing'){
+    if(!perfChecked && raw > 0.008){
+      perfAcc += raw; perfN++;
+      if(perfN >= 240){
+        perfChecked = true;
+        if(perfAcc / perfN > 0.0205 && renderScale > 1.3) applyRenderScale(1.25);
+      }
+    }
     // 慢动作恢复
     if(G.slowT > 0){ G.slowT -= raw; }
     else G.slow = lerp(G.slow, 1, Math.min(1, raw*10));
@@ -3241,7 +3412,7 @@ function frame(now){
       G.hitStop -= raw;
       dt = raw * 0.06;
     }
-    G.shake = Math.max(0, G.shake - raw*46);
+    G.shake = Math.max(0, G.shake - raw*40);
     G.flash = Math.max(0, G.flash - raw*2.4);
 
     updatePlayer(dt);
@@ -3460,7 +3631,9 @@ document.addEventListener('visibilitychange', ()=>{
    18. 启动
    ========================================================= */
 ribbon.reset(W*0.72, H*0.80-103);
-window.__DI = { G, player, LEVELS, spawnEnemy, makeEnemy, startLevel, spawnBoss, ENEMY_TYPES };
+window.__DI = { G, player, LEVELS, spawnEnemy, makeEnemy, startLevel, spawnBoss, ENEMY_TYPES,
+  castZ, castX, castC, castV, basicAttack, hurtPlayer, dodge, victory, defeat,
+  get scale(){ return renderScale; } };
 requestAnimationFrame(frame);
 
 })();
