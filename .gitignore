@@ -1,0 +1,15 @@
+# 依赖与临时产物
+node_modules/
+_pwtest/node_modules/
+_pwtest/*.png
+
+# 系统与编辑器杂项
+Thumbs.db
+desktop.ini
+.DS_Store
+*.log
+*.tmp
+~$*
+
+# 自动截图临时文件
+assets/covers/_*.png
