@@ -136,7 +136,7 @@
   .stat-cell{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 6px}
   .stat-cell b{display:block;font-size:22px;font-weight:900;color:#fff;line-height:1.1}
   .stat-cell span{font-size:10.5px;letter-spacing:.14em;color:rgba(243,237,224,.45)}
-  .rank{font-size:64px;font-weight:900;line-height:1;letter-spacing:.02em;
+  .rank{font-size:64px;font-weight:900;line-height:1.08;letter-spacing:.02em;padding:.06em .04em .02em;
     background:linear-gradient(180deg,#ffe9a8,#ffb020 55%,#c97700);
     -webkit-background-clip:text;background-clip:text;color:transparent;
     filter:drop-shadow(0 0 18px rgba(255,176,32,.45));margin-bottom:4px}
@@ -175,6 +175,10 @@
     background:rgba(10,7,16,.6);border:1px solid rgba(255,255,255,.14);
     font-size:13px;font-weight:700;color:rgba(243,237,224,.8);transition:.15s}
   .icon-btn:hover{border-color:rgba(255,90,90,.7);color:#fff;background:rgba(255,45,45,.16)}
+  /* 暂停图标：两根竖条，任何系统字体下都不会变成方框 */
+  .pause-bars{display:flex;align-items:center;justify-content:center;gap:4px}
+  .pause-bars i{display:block;width:3px;height:12px;border-radius:1.5px;background:currentColor}
+  .icon-btn:hover .pause-bars i{background:#fff}
 
   .vitals-slot{position:absolute;left:22px;bottom:18px;width:300px}
   .vitals{display:flex;flex-direction:column;gap:7px}
@@ -203,7 +207,7 @@
   .skill.cooling b{opacity:.22}
   .skill.cooling em{opacity:.25}
   /* 大招大部分时间都在攒怒气：不能像普通冷却那样压到全黑，否则玩家看不清这个技能 */
-  .skill.ult.cooling b{opacity:.62}
+  .skill.ult.cooling b{opacity:.88}
   .skill.ult.cooling i{color:rgba(255,255,255,.8)}
   .skill.ult.cooling em{opacity:.7}
   .skill.ready{border-color:rgba(255,120,90,.65);box-shadow:0 6px 20px rgba(0,0,0,.5),0 0 18px rgba(255,60,40,.28)}
@@ -247,19 +251,47 @@
   /* 手机端画布按 16:9 居中，两侧留黑；HUD 贴屏幕四角，不跟着黑边缩进 */
   body.touch-mode canvas{position:absolute;width:100%;height:100%}
 
-  /* HUD 重排：血条怒气挪到左上，避开左下摇杆 */
-  body.touch-mode .hud-top{top:calc(8px + var(--sai-top));left:calc(10px + var(--sai-left));
-    right:calc(10px + var(--sai-right));gap:10px}
-  body.touch-mode .lv-name{font-size:12px}
-  body.touch-mode .lv-wave{font-size:9.5px}
-  body.touch-mode .hud-stat{font-size:10.5px}
-  body.touch-mode .hud-stat b{font-size:12px}
-  body.touch-mode .combo span{font-size:24px}
-  body.touch-mode .icon-btn{width:40px;height:40px;font-size:15px;border-radius:10px}
-  body.touch-mode .vitals-slot{left:calc(10px + var(--sai-left));top:calc(64px + var(--sai-top));
-    bottom:auto;width:min(44%,300px)}
-  body.touch-mode .vitals{width:100%}
-  body.touch-mode .hint{bottom:26%}
+  /* HUD 重排：信息收进顶部一条，血条缩小，战场中央与右下留空 */
+  body.touch-mode .hud-top{top:calc(6px + var(--sai-top));left:calc(8px + var(--sai-left));
+    right:calc(8px + var(--sai-right));gap:8px;align-items:flex-start}
+  body.touch-mode .level-info{padding:5px 10px 6px;border-radius:10px;
+    background:rgba(8,6,14,.74);border-color:rgba(255,255,255,.12);backdrop-filter:blur(6px)}
+  body.touch-mode .lv-name{font-size:11.5px;letter-spacing:.08em;line-height:1.25}
+  body.touch-mode .lv-wave{font-size:9px;letter-spacing:.1em;margin-top:1px}
+  body.touch-mode .hud-stat{font-size:9.5px;letter-spacing:.06em;line-height:1.45}
+  body.touch-mode .hud-stat b{font-size:11.5px}
+  body.touch-mode .icon-btn{width:38px;height:38px;font-size:15px;border-radius:11px;
+    background:rgba(8,6,14,.74);backdrop-filter:blur(6px)}
+  body.touch-mode .combo{position:absolute;top:calc(50px + var(--sai-top));
+    right:calc(10px + var(--sai-right));gap:3px}
+  body.touch-mode .combo span{font-size:21px}
+  body.touch-mode .combo small{font-size:9px}
+
+  /* 血条：宽度压到屏宽四分之一上下，两层叠在关卡名下面，不压战场 */
+  body.touch-mode .vitals-slot{left:calc(8px + var(--sai-left));top:calc(46px + var(--sai-top));
+    bottom:auto;width:clamp(148px,26vw,206px)}
+  body.touch-mode .vitals{width:100%;gap:4px;filter:drop-shadow(0 3px 9px rgba(0,0,0,.55))}
+  body.touch-mode .vitals .bar{height:13px;border-radius:7px;border-color:rgba(255,255,255,.16)}
+  body.touch-mode .vitals .bar.rage{height:9px;border-radius:4px;
+    background:linear-gradient(90deg,rgba(122,75,255,.26),rgba(0,0,0,.55))}
+  body.touch-mode .vitals .bar span{font-size:9px;letter-spacing:.05em}
+  /* 怒气条只有 9px 高，文字塞进去只会糊成一片；怒气值交给大招按钮上的进度显示 */
+  body.touch-mode .vitals .bar.rage span{display:none}
+
+  /* BOSS 血条：细一条贴顶，不抢关卡信息 */
+  body.touch-mode .boss-wrap{max-width:34%;margin-top:2px}
+  body.touch-mode .boss-name{font-size:9.5px;letter-spacing:.18em;margin-bottom:3px}
+  body.touch-mode .boss-bar{height:7px}
+
+  /* 教学提示：顶部胶囊，避开左右操作区 */
+  body.touch-mode .hint{top:calc(146px + var(--sai-top));bottom:auto;left:50%;right:auto;
+    transform:translateX(-50%);width:max-content;max-width:min(74vw,540px);
+    padding:6px 14px;border-radius:999px;background:rgba(8,6,14,.72);
+    border:1px solid rgba(255,255,255,.1);font-size:11.5px;line-height:1.45;
+    backdrop-filter:blur(4px)}
+  body.touch-mode .banner{top:calc(58px + var(--sai-top))}
+  body.touch-mode .banner .b-main{font-size:clamp(20px,4.6vw,32px)}
+  body.touch-mode .banner .b-sub{font-size:10px}
 
   /* 摇杆 */
   body.touch-mode .touch-ui{display:block}
@@ -279,37 +311,99 @@
   /* 技能簇：作为满屏浮层，子按钮用 right/bottom 贴着屏幕角摆位 */
   body.touch-mode .skills{position:absolute;inset:0;display:block}
   body.touch-mode .skill{position:absolute;border-radius:50%;border-width:1px;
-    pointer-events:auto;touch-action:none}
-  body.touch-mode .skill b{font-size:22px}
+    display:grid;place-items:center;pointer-events:auto;touch-action:none;
+    transition:transform .08s ease,border-color .12s,box-shadow .12s}
+  body.touch-mode .skill b{font-size:22px;line-height:1}
   body.touch-mode .skill i,body.touch-mode .skill em{display:none}
   body.touch-mode .skill-row em{display:none}
-  body.touch-mode .boss-wrap{max-width:38%}
-  body.touch-mode .skill .cd{font-size:13px}
-  body.touch-mode .skill.ult{border-color:rgba(255,80,220,.62)}
+  body.touch-mode .skill .cd{font-size:12px;border-radius:50%}
+  body.touch-mode .skill.pressed{transform:scale(.9)}
+  body.touch-mode .skill.cooling{filter:saturate(.75)}
+  body.touch-mode .skill.ready{box-shadow:0 0 0 1px rgba(255,255,255,.22),0 0 20px rgba(255,80,60,.3)}
+  body.touch-mode .boss-wrap{max-width:34%}
+  body.touch-mode .skill.ult{border-color:rgba(255,80,220,.72)}
+  body.touch-mode .skill.ult.ready{animation:ultPulse 1s infinite}
 
-  /* 闪避键：独立一颗，不占四个技能位 */
+  /* 闪避键：独立一颗，压在小技能左下，拇指自然够到 */
   body.touch-mode .tbtn{display:grid;place-items:center;position:absolute;border-radius:50%;
     background:linear-gradient(160deg,#26303c,#0e141b);border:1px solid rgba(150,210,255,.4);
     box-shadow:0 8px 22px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.14);
     pointer-events:auto;touch-action:none;overflow:hidden;color:#dff1ff}
   body.touch-mode .tbtn b{font-size:16px;font-weight:900;z-index:1;text-shadow:0 0 12px rgba(120,200,255,.8)}
   body.touch-mode .tbtn .tcd{position:absolute;inset:0;display:grid;place-items:center;z-index:2;
-    font-size:13px;font-weight:900;color:#fff;text-shadow:0 1px 4px #000}
+    font-size:13px;font-weight:900;color:#fff;text-shadow:0 1px 4px #000;border-radius:50%}
   body.touch-mode .tbtn.cooling b{opacity:.3}
 
-  /* 竖屏提示：横屏才能铺满，竖屏直接挡住 */
-  .rotate-hint{position:fixed;inset:0;z-index:60;flex-direction:column;gap:16px;
-    align-items:center;justify-content:center;background:#05040a;color:#f3ede0;text-align:center;
-    font-size:16px;letter-spacing:.2em}
-  .rotate-hint .rh-ico{font-size:40px;color:#ff5a4a;animation:rot 2s ease-in-out infinite}
-  @keyframes rot{0%,100%{transform:rotate(0)}50%{transform:rotate(-90deg)}}
+  /* 竖屏：不挡游戏，只在顶部挂一条轻提示，界面照常加载可玩 */
+  .rotate-hint{display:none}
+  .rotate-hint.rh-off{display:none!important}
   @media (orientation:portrait){
-    body.touch-mode .rotate-hint{display:flex}
+    body.touch-mode .rotate-hint{display:flex;position:fixed;z-index:40;
+      left:50%;transform:translateX(-50%);top:auto;bottom:calc(26vh + var(--sai-bottom));
+      flex-direction:row;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
+      background:rgba(10,7,16,.88);border:1px solid rgba(255,90,90,.4);
+      color:#ffd9cf;font-size:11px;letter-spacing:.06em;white-space:nowrap;
+      box-shadow:0 8px 24px rgba(0,0,0,.55);pointer-events:none}
+    body.touch-mode .rotate-hint .rh-ico{font-size:13px;animation:rot 2.4s ease-in-out infinite}
+    body.touch-mode.rh-top .rotate-hint{top:calc(14px + var(--sai-top));bottom:auto}
+    /* 竖屏时顶部信息条已占住左上/右上，提示条居中；BOSS、教学提示、关卡横幅依次下移 */
+    body.touch-mode .boss-wrap{position:absolute;left:50%;transform:translateX(-50%);
+      top:calc(80px + var(--sai-top));width:min(68vw,330px);max-width:none;margin:0}
+    body.touch-mode .hint{top:calc(112px + var(--sai-top));max-width:82vw}
+    body.touch-mode .banner{top:22%}
+  }
+  @keyframes rot{0%,100%{transform:rotate(0)}50%{transform:rotate(-90deg)}}
+
+  /* 竖屏窄屏：三列会把关卡卡片的 STAGE 与星标挤在一起，改成两列；标题菜单也改单列 */
+  @media (max-width:520px){
+    body.touch-mode .level-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+    body.touch-mode .lv-card{min-height:150px}
+    body.touch-mode .menu{flex-direction:column;width:min(78vw,330px);gap:10px}
+    body.touch-mode .menu .btn{width:100%;padding:12px 20px}
+  }
+
+  /* 横屏矮屏幕（手机横屏、小平板）：所有浮层都收紧，结算面板不出现滚动条 */
+  body.touch-mode .screen::-webkit-scrollbar{display:none}
+  body.touch-mode .screen{scrollbar-width:none}
+  body.touch-mode #screen-result,body.touch-mode #screen-pause{overflow:hidden;padding:2%}
+  @media (max-height:560px){
+    body.touch-mode .screen{padding:2% 3%}
+    body.touch-mode h1{font-size:clamp(22px,6.4vh,44px)}
+    body.touch-mode .tagline{font-size:11px;letter-spacing:.3em}
+    body.touch-mode .kicker{font-size:10px}
+    body.touch-mode .title-wrap{gap:6px}
+    body.touch-mode .menu{margin-top:14px;gap:10px}
+    body.touch-mode .btn{padding:10px 22px;font-size:14px}
+    body.touch-mode .title-foot{margin-top:10px;font-size:10px}
+    body.touch-mode .screen h2{font-size:20px;margin-bottom:2px}
+    body.touch-mode .screen .sub{margin-bottom:10px;font-size:10px}
+    body.touch-mode #screen-select{padding-top:2%}
+    body.touch-mode .lv-card{min-height:100px;padding:8px 10px 6px;gap:2px}
+    body.touch-mode .lv-card .ds{display:none}
+    body.touch-mode .lv-card .nm{font-size:15px}
+    body.touch-mode .lv-card .idx{font-size:9px;letter-spacing:.2em}
+    body.touch-mode .lv-card .foes{padding-top:6px}
+    body.touch-mode .level-grid{gap:8px}
+    body.touch-mode .help-actions{margin-top:10px}
+
+    /* 暂停 / 结算：横屏一屏装下 */
+    body.touch-mode .modal{padding:12px 18px;border-radius:12px;max-width:460px}
+    body.touch-mode .modal h2{font-size:18px;letter-spacing:.14em;margin-bottom:2px}
+    body.touch-mode .modal .r-sub{font-size:9.5px;margin-bottom:6px;letter-spacing:.18em}
+    body.touch-mode .stat-grid{gap:6px;margin-bottom:10px}
+    body.touch-mode .stat-cell{padding:6px 4px;border-radius:7px}
+    body.touch-mode .stat-cell b{font-size:16px}
+    body.touch-mode .stat-cell span{font-size:9px;letter-spacing:.08em}
+    body.touch-mode .rank{font-size:32px;margin-bottom:0;line-height:1.15;padding:.02em .04em}
+    body.touch-mode .stars-big{font-size:17px;letter-spacing:.1em;margin-bottom:6px}
+    body.touch-mode .modal .row{gap:8px}
+    body.touch-mode .modal .row .btn{padding:9px 16px;font-size:13px}
+    body.touch-mode .tip-line{margin-top:8px;font-size:10px}
   }
 </style>
 </head>
 <body>
-<div class="rotate-hint" id="rotateHint"><div class="rh-ico">⟳</div><p>请横屏游玩</p></div>
+<div class="rotate-hint" id="rotateHint"><span class="rh-ico">⟳</span><span>建议横屏 · 体验更佳</span></div>
 <div id="app">
   <canvas id="game"></canvas>
 
@@ -327,8 +421,8 @@
       <div class="hud-right">
         <div class="combo" id="comboBox"><span id="comboNum">0</span><small>连击</small></div>
         <div class="hud-stat"><b id="hudKills">0</b> 击杀<br><span id="hudTime">00:00</span></div>
-        <button class="icon-btn" id="btnMute" title="静音 (M)">♪</button>
-        <button class="icon-btn" id="btnPause" title="暂停 (Esc)">Ⅱ</button>
+        <button class="icon-btn" id="btnMute" title="静音 (M)" aria-label="静音">♪</button>
+        <button class="icon-btn" id="btnPause" title="暂停 (Esc)" aria-label="暂停"><span class="pause-bars"><i></i><i></i></span></button>
       </div>
     </div>
 
@@ -353,7 +447,7 @@
       <div class="skill" data-skill="z"><div class="cd" id="cdZ"></div><b>旋</b><i>Z</i><em>旋风斩</em></div>
       <div class="skill" data-skill="x"><div class="cd" id="cdX"></div><b>跃</b><i>X</i><em>裂地跃斩</em></div>
       <div class="skill" data-skill="c"><div class="cd" id="cdC"></div><b>投</b><i>C</i><em>裂空投</em></div>
-      <div class="skill ult" data-skill="v"><div class="cd" id="cdV"></div><b>极</b><i>V</i><em>无影斩</em></div>
+      <div class="skill ult" data-skill="v"><div class="cd" id="cdV"></div><b>斩</b><i>V</i><em>无影斩</em></div>
       <button class="tbtn" id="btnDodge" aria-label="闪避"><b>闪</b><span class="tcd" id="cdDodge"></span></button>
     </div>
 
@@ -384,7 +478,7 @@
       <div class="sub">STAGE SELECT · 通关解锁下一座岛屿</div>
       <div class="level-grid" id="levelGrid"></div>
       <div class="help-actions">
-        <button class="btn ghost" id="btnBackTitle">返回标题</button>
+        <button class="btn ghost" id="btnBackTitle">返回主菜单</button>
       </div>
     </section>
 
@@ -2351,7 +2445,7 @@ function updateHud(){
     skillBoxes.v.classList.remove('cooling');
   } else {
     const p = 1 - player.rage/100;
-    const bg = `conic-gradient(rgba(4,2,8,.84) ${(p*360).toFixed(1)}deg, transparent 0deg)`;
+    const bg = `conic-gradient(rgba(4,2,8,.55) ${(p*360).toFixed(1)}deg, transparent 0deg)`;
     if(vNode.__bg !== bg){ vNode.__bg = bg; vNode.style.background = bg; }
     setText2(vNode, player.ultT > 0 ? '连斩' : '');
     skillBoxes.v.classList.remove('ready');
@@ -3596,7 +3690,14 @@ function showScreen(name){
     const n = document.getElementById('screen-'+name);
     if(n) n.classList.add('active');
   }
+  // 横屏提示只在标题页和战斗中露出：选关、说明、暂停、结算页都有实体面板，避免压住按钮
+  const rh = document.getElementById('rotateHint');
+  if(rh) rh.classList.toggle('rh-off', !(name === null || name === 'title'));
+  // 标题页没有 HUD，提示条挂到顶部，避免压住标题下方的操作说明
+  document.body.classList.toggle('rh-top', name === 'title');
 }
+// 初始停在标题页，提示条先挂顶部（触屏竖屏才可见）
+if(IS_TOUCH) document.body.classList.add('rh-top');
 
 function setState(s){
   G.state = s;
@@ -3790,15 +3891,16 @@ function layoutTouch(){
   canvas.style.width = cw + 'px';
   canvas.style.height = ch + 'px';
 
-  // 手机横屏时约 0.20 / 0.145 / 0.115 屏高；平板上封顶，避免按钮巨大
-  const U = clamp(ah * 0.20, 60, 96);     // 无影斩
-  const S = clamp(ah * 0.145, 46, 74);    // 三个小技能
-  const D = clamp(ah * 0.115, 40, 60);    // 闪避
-  const J = clamp(ah * 0.34, 104, 168);   // 摇杆底盘
+  // 尺寸基准取屏幕短边：横屏看高度、竖屏看宽度，竖屏下按钮也不会撑爆版面
+  const short = Math.min(ah, aw);
+  const U = clamp(short * 0.19, 52, 92);     // 无影斩
+  const S = clamp(short * 0.135, 40, 64);    // 三个小技能
+  const D = clamp(short * 0.105, 36, 52);    // 闪避
+  const J = clamp(short * 0.30, 96, 150);    // 摇杆底盘
 
-  const insB = Math.max(10, ah * 0.035) + readSafeInset('bottom');
-  const insL = Math.max(12, aw * 0.03) + readSafeInset('left');
-  const insR = Math.max(12, aw * 0.03) + readSafeInset('right');
+  const insB = Math.max(8, short * 0.03) + readSafeInset('bottom');
+  const insL = Math.max(10, aw * 0.025) + readSafeInset('left');
+  const insR = Math.max(10, aw * 0.025) + readSafeInset('right');
 
   // 摇杆
   stickEl.style.width = stickEl.style.height = J + 'px';
@@ -3812,29 +3914,32 @@ function layoutTouch(){
   stick.R  = J * 0.30;   // 摇杆头可推到的半径
   stick.dz = J * 0.10;   // 死区，手指轻微抖动不产生位移
 
-  // 技能簇：大招贴右下角，三个小技能沿左上方 14°/44°/74° 弧线排开
-  const R = U / 2 + S / 2 + 10;
-  const arc = [['z', 14], ['x', 44], ['c', 74]];
-  for(const [k, deg] of arc){
-    const b = skillBoxes[k];
-    const a = deg * Math.PI / 180;
-    b.style.width = b.style.height = S + 'px';
-    b.style.right  = (insR + U / 2 - S / 2 + R * Math.sin(a)).toFixed(1) + 'px';
-    b.style.bottom = (insB + U / 2 - S / 2 + R * Math.cos(a)).toFixed(1) + 'px';
-    const t = b.querySelector('b');
-    if(t) t.style.fontSize = Math.round(S * 0.44) + 'px';
-  }
+  // 大招压右下角（最靠外、默认最大），三个小技能从它左侧起步向左上弧线展开：Z 最低 → X → C 最高
   const vb = skillBoxes.v;
   vb.style.width = vb.style.height = U + 'px';
   vb.style.right  = insR + 'px';
   vb.style.bottom = insB + 'px';
   const vt = vb.querySelector('b');
-  if(vt) vt.style.fontSize = Math.round(U * 0.34) + 'px';
+  if(vt) vt.style.fontSize = Math.round(U * 0.40) + 'px';
 
-  // 闪避键：贴在技能簇左侧，比小技能再低一点，拇指自然够到
+  const gap = Math.max(6, U * 0.10);
+  const stepX = S * 0.46, stepY = S * 0.88;
+  let sx = insR + U + gap;   // Z 的右边缘：紧贴大招左侧
+  let sy = insB + 2;         // Z 的下边缘：与大招同底
+  for(const k of ['z','x','c']){
+    const b = skillBoxes[k];
+    b.style.width = b.style.height = S + 'px';
+    b.style.right  = sx.toFixed(1) + 'px';
+    b.style.bottom = sy.toFixed(1) + 'px';
+    const t = b.querySelector('b');
+    if(t) t.style.fontSize = Math.round(S * 0.44) + 'px';
+    sx += stepX; sy += stepY;
+  }
+
+  // 闪避键：压在小技能左下，拇指横向一挪就能按到
   dodgeEl.style.width = dodgeEl.style.height = D + 'px';
-  dodgeEl.style.right  = (insR + U / 2 + R * Math.sin(74 * Math.PI / 180) + S / 2 + 12).toFixed(1) + 'px';
-  dodgeEl.style.bottom = (insB + 8).toFixed(1) + 'px';
+  dodgeEl.style.right  = (insR + U + gap + S + Math.max(7, S * 0.18)).toFixed(1) + 'px';
+  dodgeEl.style.bottom = (insB + 2).toFixed(1) + 'px';
   const db = dodgeEl.querySelector('b');
   if(db) db.style.fontSize = Math.round(D * 0.32) + 'px';
 }
@@ -3893,7 +3998,14 @@ if(IS_TOUCH){
   // 技能键：按下即放，不等抬手，免得高节奏连招漏技能
   for(const [k, fn] of [['z', castZ], ['x', castX], ['c', castC], ['v', castV]]){
     const b = skillBoxes[k];
-    b.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); fn(); });
+    b.addEventListener('pointerdown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      b.classList.add('pressed');
+      setTimeout(()=> b.classList.remove('pressed'), 110);
+      fn();
+    });
+    b.addEventListener('pointercancel', ()=> b.classList.remove('pressed'));
+    b.addEventListener('pointerup', ()=> b.classList.remove('pressed'));
   }
   dodgeEl.addEventListener('pointerdown', e=>{
     e.preventDefault(); e.stopPropagation();
