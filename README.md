@@ -7,9 +7,9 @@
 | 路径 | 说明 |
 | --- | --- |
 | `index.html` | 入口页（游戏广场）：卡片式游戏墙，点击进游戏、随时返回广场 |
-| `小豆闯关记.html` | 横版闯关（10 关） |
-| `植物大战僵尸.html` | 塔防策略 |
-| `火柴人勇闯恶魔岛.html` | 动作格斗（5 关，自动锁敌 + Z X C V 四技能） |
+| `xiaodou.html` | 小豆闯关记 · 横版闯关（10 关） |
+| `pvz.html` | 植物大战僵尸 · 塔防策略 |
+| `stickman.html` | 火柴人勇闯恶魔岛 · 动作格斗（5 关，自动锁敌 + Z X C V 四技能） |
 | `assets/covers/` | 各游戏封面，由自动截图脚本生成 |
 | `docs/` | 游戏设计文档（单文件 HTML，入口 `docs/index.html`） |
 | `tools/make-covers.ps1` | 封面批量截图脚本（调用本机 Chrome / Edge 无头模式） |
@@ -29,9 +29,9 @@ GitHub Pages 已上线整个广场，根路径就是入口页：
 
 | 游戏 | 在线地址 |
 | --- | --- |
-| 小豆闯关记 | <https://huayizhe.github.io/xiaodoudou-game-playground/小豆闯关记.html> |
-| 植物大战僵尸 | <https://huayizhe.github.io/xiaodoudou-game-playground/植物大战僵尸.html> |
-| 火柴人勇闯恶魔岛 | <https://huayizhe.github.io/xiaodoudou-game-playground/火柴人勇闯恶魔岛.html> |
+| 小豆闯关记 | <https://huayizhe.github.io/xiaodoudou-game-playground/xiaodou.html> |
+| 植物大战僵尸 | <https://huayizhe.github.io/xiaodoudou-game-playground/pvz.html> |
+| 火柴人勇闯恶魔岛 | <https://huayizhe.github.io/xiaodoudou-game-playground/stickman.html> |
 
 根路径的 `index.html` 就是广场页本体，改完直接提交推送即可，不需要复制副本。
 

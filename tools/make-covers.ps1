@@ -23,9 +23,9 @@ $OutPath = Join-Path $Root $OutDir
 
 # ---- 游戏名单：File=游戏文件，Slug=封面文件名（不含后缀），Crop=可选裁剪 @(X,Y,W,H) ----
 $Games = @(
-  [pscustomobject]@{ File = "小豆闯关记.html";       Slug = "xiaodou";  Crop = $null },
-  [pscustomobject]@{ File = "火柴人勇闯恶魔岛.html"; Slug = "stickman"; Crop = $null },
-  [pscustomobject]@{ File = "植物大战僵尸.html";     Slug = "pvz";      Crop = @(81, 0, 1118, 720) }
+  [pscustomobject]@{ File = "xiaodou.html";  Slug = "xiaodou";  Crop = $null },
+  [pscustomobject]@{ File = "stickman.html"; Slug = "stickman"; Crop = $null },
+  [pscustomobject]@{ File = "pvz.html";      Slug = "pvz";      Crop = @(81, 0, 1118, 720) }
 )
 
 function Find-Browser {
