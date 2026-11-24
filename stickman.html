@@ -176,8 +176,8 @@
     font-size:13px;font-weight:700;color:rgba(243,237,224,.8);transition:.15s}
   .icon-btn:hover{border-color:rgba(255,90,90,.7);color:#fff;background:rgba(255,45,45,.16)}
 
-  .hud-bottom{position:absolute;left:22px;right:22px;bottom:18px;display:flex;align-items:flex-end;gap:24px}
-  .vitals{width:300px;display:flex;flex-direction:column;gap:7px}
+  .vitals-slot{position:absolute;left:22px;bottom:18px;width:300px}
+  .vitals{display:flex;flex-direction:column;gap:7px}
   .bar{position:relative;height:20px;border-radius:5px;background:rgba(0,0,0,.62);
     border:1px solid rgba(255,255,255,.14);overflow:hidden}
   .bar .fill{position:absolute;inset:0;width:100%;transform-origin:left;transition:transform .1s linear}
@@ -188,7 +188,7 @@
     letter-spacing:.1em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9)}
   .keys-hint{font-size:10.5px;letter-spacing:.08em;color:rgba(243,237,224,.38);margin-top:2px}
 
-  .skills{margin-left:auto;display:flex;gap:10px;align-items:flex-end}
+  .skills{position:absolute;right:22px;bottom:18px;display:flex;gap:10px;align-items:flex-end}
   .skill{position:relative;width:62px;height:62px;border-radius:11px;display:grid;place-items:center;
     background:linear-gradient(160deg,#241a2e,#120c19);
     border:1px solid rgba(255,255,255,.16);box-shadow:0 6px 18px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.12);
@@ -225,13 +225,91 @@
   @media (max-width:900px){
     .level-grid{grid-template-columns:repeat(3,1fr)}
     .help-wrap{grid-template-columns:1fr}
-    .vitals{width:220px}
+    .vitals-slot{width:220px}
     .skill{width:52px;height:52px}
     .skill b{font-size:20px}
+  }
+
+  /* ================= 触屏 / 手机模式 ================= */
+  /* 默认全部隐藏，只有 body.touch-mode 才启用，桌面端渲染结果不变 */
+  .touch-ui,.touch-only,.tbtn,.rotate-hint{display:none}
+  :root{
+    --sai-top:env(safe-area-inset-top,0px); --sai-bottom:env(safe-area-inset-bottom,0px);
+    --sai-left:env(safe-area-inset-left,0px); --sai-right:env(safe-area-inset-right,0px);
+  }
+
+  body.touch-mode #app{width:100vw;height:100vh;height:100dvh;aspect-ratio:auto;box-shadow:none;background:#05040a}
+  body.touch-mode .screen{padding:3% 3%;overflow-y:auto}
+  body.touch-mode .kbd-only{display:none}
+  body.touch-mode .touch-only{display:flex}
+  body.touch-mode .keys-hint{display:none}
+
+  /* 手机端画布按 16:9 居中，两侧留黑；HUD 贴屏幕四角，不跟着黑边缩进 */
+  body.touch-mode canvas{position:absolute;width:100%;height:100%}
+
+  /* HUD 重排：血条怒气挪到左上，避开左下摇杆 */
+  body.touch-mode .hud-top{top:calc(8px + var(--sai-top));left:calc(10px + var(--sai-left));
+    right:calc(10px + var(--sai-right));gap:10px}
+  body.touch-mode .lv-name{font-size:12px}
+  body.touch-mode .lv-wave{font-size:9.5px}
+  body.touch-mode .hud-stat{font-size:10.5px}
+  body.touch-mode .hud-stat b{font-size:12px}
+  body.touch-mode .combo span{font-size:24px}
+  body.touch-mode .icon-btn{width:40px;height:40px;font-size:15px;border-radius:10px}
+  body.touch-mode .vitals-slot{left:calc(10px + var(--sai-left));top:calc(64px + var(--sai-top));
+    bottom:auto;width:min(44%,300px)}
+  body.touch-mode .vitals{width:100%}
+  body.touch-mode .hint{bottom:26%}
+
+  /* 摇杆 */
+  body.touch-mode .touch-ui{display:block}
+  body.touch-mode .stick{position:absolute;display:grid;place-items:center;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,.05),rgba(255,255,255,.015) 55%,rgba(255,45,45,.05) 100%);
+    border:1px solid rgba(255,255,255,.18);
+    box-shadow:inset 0 0 26px rgba(0,0,0,.55),0 6px 20px rgba(0,0,0,.45);
+    pointer-events:auto;touch-action:none;z-index:2}
+  body.touch-mode .stick-ring{position:absolute;inset:24%;border-radius:50%;
+    border:1px dashed rgba(255,255,255,.16)}
+  body.touch-mode .stick-knob{position:absolute;border-radius:50%;
+    background:radial-gradient(circle at 38% 32%,rgba(255,150,130,.95),rgba(190,35,32,.9) 60%,rgba(96,10,10,.92));
+    border:1px solid rgba(255,170,150,.6);
+    box-shadow:0 6px 16px rgba(0,0,0,.55),0 0 20px rgba(255,60,40,.4);
+    will-change:transform;pointer-events:none}
+
+  /* 技能簇：作为满屏浮层，子按钮用 right/bottom 贴着屏幕角摆位 */
+  body.touch-mode .skills{position:absolute;inset:0;display:block}
+  body.touch-mode .skill{position:absolute;border-radius:50%;border-width:1px;
+    pointer-events:auto;touch-action:none}
+  body.touch-mode .skill b{font-size:22px}
+  body.touch-mode .skill i,body.touch-mode .skill em{display:none}
+  body.touch-mode .skill-row em{display:none}
+  body.touch-mode .boss-wrap{max-width:38%}
+  body.touch-mode .skill .cd{font-size:13px}
+  body.touch-mode .skill.ult{border-color:rgba(255,80,220,.62)}
+
+  /* 闪避键：独立一颗，不占四个技能位 */
+  body.touch-mode .tbtn{display:grid;place-items:center;position:absolute;border-radius:50%;
+    background:linear-gradient(160deg,#26303c,#0e141b);border:1px solid rgba(150,210,255,.4);
+    box-shadow:0 8px 22px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.14);
+    pointer-events:auto;touch-action:none;overflow:hidden;color:#dff1ff}
+  body.touch-mode .tbtn b{font-size:16px;font-weight:900;z-index:1;text-shadow:0 0 12px rgba(120,200,255,.8)}
+  body.touch-mode .tbtn .tcd{position:absolute;inset:0;display:grid;place-items:center;z-index:2;
+    font-size:13px;font-weight:900;color:#fff;text-shadow:0 1px 4px #000}
+  body.touch-mode .tbtn.cooling b{opacity:.3}
+
+  /* 竖屏提示：横屏才能铺满，竖屏直接挡住 */
+  .rotate-hint{position:fixed;inset:0;z-index:60;flex-direction:column;gap:16px;
+    align-items:center;justify-content:center;background:#05040a;color:#f3ede0;text-align:center;
+    font-size:16px;letter-spacing:.2em}
+  .rotate-hint .rh-ico{font-size:40px;color:#ff5a4a;animation:rot 2s ease-in-out infinite}
+  @keyframes rot{0%,100%{transform:rotate(0)}50%{transform:rotate(-90deg)}}
+  @media (orientation:portrait){
+    body.touch-mode .rotate-hint{display:flex}
   }
 </style>
 </head>
 <body>
+<div class="rotate-hint" id="rotateHint"><div class="rh-ico">⟳</div><p>请横屏游玩</p></div>
 <div id="app">
   <canvas id="game"></canvas>
 
@@ -254,18 +332,29 @@
       </div>
     </div>
 
-    <div class="hud-bottom">
+    <div class="vitals-slot">
       <div class="vitals">
         <div class="bar hp"><div class="fill" id="hpFill"></div><span id="hpText">100 / 100</span></div>
         <div class="bar rage"><div class="fill" id="rageFill"></div><span id="rageText">怒气 0 / 100</span></div>
         <div class="keys-hint">WASD 移动 · 自动锁定最近敌人并普攻 · 空格 闪避</div>
       </div>
-      <div class="skills">
-        <div class="skill" data-skill="z"><div class="cd" id="cdZ"></div><b>旋</b><i>Z</i><em>旋风斩</em></div>
-        <div class="skill" data-skill="x"><div class="cd" id="cdX"></div><b>跃</b><i>X</i><em>裂地跃斩</em></div>
-        <div class="skill" data-skill="c"><div class="cd" id="cdC"></div><b>投</b><i>C</i><em>裂空投</em></div>
-        <div class="skill ult" data-skill="v"><div class="cd" id="cdV"></div><b>极</b><i>V</i><em>千影滑斩</em></div>
+    </div>
+
+    <!-- 触屏摇杆：仅手机模式显示，位置与尺寸由 layoutTouch() 计算 -->
+    <div class="touch-ui">
+      <div class="stick" id="stick">
+        <div class="stick-ring"></div>
+        <div class="stick-knob" id="stickKnob"></div>
       </div>
+    </div>
+
+    <!-- 技能簇：桌面端是右下角一排键位提示；手机端由 layoutTouch() 摆成 1 大 3 小弧线 -->
+    <div class="skills">
+      <div class="skill" data-skill="z"><div class="cd" id="cdZ"></div><b>旋</b><i>Z</i><em>旋风斩</em></div>
+      <div class="skill" data-skill="x"><div class="cd" id="cdX"></div><b>跃</b><i>X</i><em>裂地跃斩</em></div>
+      <div class="skill" data-skill="c"><div class="cd" id="cdC"></div><b>投</b><i>C</i><em>裂空投</em></div>
+      <div class="skill ult" data-skill="v"><div class="cd" id="cdV"></div><b>极</b><i>V</i><em>无影斩</em></div>
+      <button class="tbtn" id="btnDodge" aria-label="闪避"><b>闪</b><span class="tcd" id="cdDodge"></span></button>
     </div>
 
     <div class="banner" id="banner"><div class="b-main" id="bannerMain"></div><div class="b-sub" id="bannerSub"></div></div>
@@ -285,7 +374,8 @@
           <button class="btn" id="btnSelect">选择关卡</button>
           <button class="btn ghost" id="btnHelp">玩法说明</button>
         </div>
-        <div class="title-foot">WASD / 方向键移动 · 自动锁敌普攻 · Z X C V 技能</div>
+        <div class="title-foot kbd-only">WASD / 方向键移动 · 自动锁敌普攻 · Z X C V 技能</div>
+        <div class="title-foot touch-only">左下摇杆移动 · 自动锁敌普攻 · 右下技能键</div>
       </div>
     </section>
 
@@ -304,14 +394,17 @@
       <div class="help-wrap">
         <div class="panel">
           <h3>操作</h3>
-          <div class="ctl-row"><span class="key">W A S D</span><span class="key">↑ ← ↓ →</span> 八方向移动</div>
+          <div class="ctl-row kbd-only"><span class="key">W A S D</span><span class="key">↑ ← ↓ →</span> 八方向移动</div>
+          <div class="ctl-row touch-only"><span class="key">摇杆</span> 左下摇杆八方向移动</div>
           <div class="ctl-row"><span class="key">自动</span> 锁定最近的敌人并自动普攻 · 三段连击（站在敌人上/下方也能砍到）</div>
-          <div class="ctl-row"><span class="key">空格</span> 闪避 · 短暂无敌</div>
-          <div class="ctl-row"><span class="key">Esc</span><span class="key">P</span> 暂停</div>
-          <div class="ctl-row"><span class="key">M</span> 静音</div>
+          <div class="ctl-row kbd-only"><span class="key">空格</span> 闪避 · 短暂无敌</div>
+          <div class="ctl-row touch-only"><span class="key">闪</span> 闪避键 · 短暂无敌</div>
+          <div class="ctl-row touch-only"><span class="key">技能</span> 右下三小键 + 无影斩 · 怒气满 100 才亮</div>
+          <div class="ctl-row kbd-only"><span class="key">Esc</span><span class="key">P</span> 暂停</div>
+          <div class="ctl-row kbd-only"><span class="key">M</span> 静音</div>
           <h3 style="margin-top:18px">生存法则</h3>
           <div class="ctl-row" style="color:rgba(243,237,224,.6);line-height:1.7">
-            每击杀 <b style="color:#ff8a6a">2</b> 只怪回复 <b style="color:#7dffa8">1%</b> 生命；命中与击杀积攒怒气，怒气满时可释放 V 技能。
+            每击杀 <b style="color:#ff8a6a">2</b> 只怪回复 <b style="color:#7dffa8">1%</b> 生命；命中与击杀积攒怒气，怒气满时可释放无影斩。
           </div>
         </div>
         <div class="panel">
@@ -319,7 +412,7 @@
           <div class="skill-row"><div class="skill-ico">旋</div><div><b>旋风斩 <em>Z</em></b><p>以自身为中心横扫一周，对小范围内敌人造成伤害，随后 2 秒内移动速度 +50%。</p></div></div>
           <div class="skill-row"><div class="skill-ico">跃</div><div><b>裂地跃斩 <em>X</em></b><p>朝锁定的敌人跃起（无目标则朝当前朝向），落地造成大范围伤害与击退，落地后回复 20% 最大生命。</p></div></div>
           <div class="skill-row"><div class="skill-ico">投</div><div><b>裂空投 <em>C</em></b><p>抓起身边最近的 5 个单位，砸向威胁最高的怪物（并列取最近）。落点中等范围内的敌人受到伤害并眩晕 2.2 秒。</p></div></div>
-          <div class="skill-row"><div class="skill-ico" style="background:linear-gradient(150deg,#3a1a4a,#180b22)">极</div><div><b>千影滑斩 <em>V</em></b><p>消耗全部怒气。化作残影滑行穿过敌人，顺势滑向下一个目标连续斩击，期间无敌，最后以剑气冲击波收尾。</p></div></div>
+          <div class="skill-row"><div class="skill-ico" style="background:linear-gradient(150deg,#3a1a4a,#180b22)">极</div><div><b>无影斩 <em>V</em></b><p>消耗全部怒气。化作残影滑行穿过敌人，顺势滑向下一个目标连续斩击，期间无敌，最后以剑气冲击波收尾。</p></div></div>
         </div>
       </div>
       <div class="panel" style="margin-top:22px;max-width:1120px;width:100%">
@@ -347,7 +440,8 @@
           <button class="btn" id="btnRestart">重新开始</button>
           <button class="btn ghost" id="btnQuit">返回选关</button>
         </div>
-        <div class="tip-line">按 Esc / P 继续</div>
+        <div class="tip-line kbd-only">按 Esc / P 继续</div>
+        <div class="tip-line touch-only">点「继续」回到战斗</div>
       </div>
     </section>
 
@@ -408,9 +502,19 @@ function fmtTime(s){
    1. 画布
    ========================================================= */
 const W = 1280, H = 720;
+
+/* 触屏识别：粗指针（手指）+ 小屏视口才启用手游操控层，桌面键鼠完全不受影响
+   ?touch=1 / ?touch=0 可强制开关，用于桌面调试 */
+const TOUCH_PARAM = new URLSearchParams(location.search).get('touch');
+const IS_TOUCH = TOUCH_PARAM === '1' || (TOUCH_PARAM !== '0'
+  && (window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window)
+  && Math.min(window.innerWidth, window.innerHeight) <= 900);
+if(IS_TOUCH) document.body.classList.add('touch-mode');
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const DPR = Math.min(window.devicePixelRatio || 1, 2);
+// 手机端 DPR 上限压到 1.5：1280×720 的线稿画面在 1.5 倍下已经足够锐利
+const DPR = IS_TOUCH ? Math.min(window.devicePixelRatio || 1, 1.5) : Math.min(window.devicePixelRatio || 1, 2);
 canvas.width = W * DPR;
 canvas.height = H * DPR;
 ctx.setTransform(DPR,0,0,DPR,0,0);
@@ -582,8 +686,19 @@ function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
    ========================================================= */
 const keys = {};
 
+/* 虚拟摇杆输出：active 为真时把方向交给 moveAxis，键盘一旦按下优先用键盘 */
+const stick = { active:false, x:0, y:0, pointer:null, cx:0, cy:0, R:0, dz:0 };
+
+/* 键盘 + 摇杆合成后的移动轴（单位向量，未归一化前长度可能是 1~1.41） */
+function moveAxis(){
+  let ix = (keys['d']||keys['arrowright']?1:0) - (keys['a']||keys['arrowleft']?1:0);
+  let iy = (keys['s']||keys['arrowdown']?1:0) - (keys['w']||keys['arrowup']?1:0);
+  if(!ix && !iy && stick.active){ ix = stick.x; iy = stick.y; }
+  return { x:ix, y:iy };
+}
+
 window.addEventListener('contextmenu', e=> e.preventDefault());
-window.addEventListener('blur', ()=>{ for(const k in keys) keys[k]=false; if(G.state==='playing') pauseGame(); });
+window.addEventListener('blur', ()=>{ for(const k in keys) keys[k]=false; resetStick(); if(G.state==='playing') pauseGame(); });
 
 window.addEventListener('keydown', e=>{
   const k = e.key.toLowerCase();
@@ -869,7 +984,7 @@ function gainRage(n){
   player.rage = clamp(player.rage + n, 0, 100);
   if(before < 100 && player.rage >= 100 && !G.rageHinted){
     G.rageHinted = true;
-    hint('怒气已满 · 按 V 释放「千影滑斩」', 2600);
+    hint(IS_TOUCH ? '怒气已满 · 无影斩 已就绪' : '怒气已满 · 按 V 释放「无影斩」', 2600);
     AudioSys.sfx('heal');
   }
 }
@@ -1042,8 +1157,7 @@ function basicAttack(target){
 /* ---------- 闪避 ---------- */
 function dodge(){
   if(player.dashCd > 0 || player.dead || player.xJumpT >= 0 || player.slideT >= 0) return;
-  let ix = (keys['d']||keys['arrowright']?1:0) - (keys['a']||keys['arrowleft']?1:0);
-  let iy = (keys['s']||keys['arrowdown']?1:0) - (keys['w']||keys['arrowup']?1:0);
+  let { x:ix, y:iy } = moveAxis();
   if(!ix && !iy){ ix = -Math.cos(player.aim); iy = -Math.sin(player.aim); }   // 无方向键：朝敌人反方向后撤
   const l = hyp(ix,iy) || 1;
   player.dashDirX = ix/l; player.dashDirY = iy/l;
@@ -1250,7 +1364,7 @@ function cImpact(ip){
   p.cGrab = null;
 }
 
-/* ---------- V 千影·滑斩：穿过敌人向前滑斩，接连斩下一个 ---------- */
+/* ---------- V 无影斩：穿过敌人向前滑斩，接连斩下一个 ---------- */
 const ULT_TIME = 2.8;
 function castV(){
   if(G.state!=='playing') return;
@@ -1265,7 +1379,7 @@ function castV(){
   G.slow = 0.5; G.slowT = 0.12;
   p.invuln = Math.max(p.invuln, ULT_TIME + 0.35);
   AudioSys.sfx('ult');
-  banner('千影 · 滑斩', 'OMEGA · 千影连斩');
+  banner('无影 · 斩', 'OMEGA · 无影连斩');
   ringFx(p.x, p.y-40, 170, '#ff2d6a', 0.4, 4);
   burst(p.x, p.y-40, 14, ['#ff2d6a','#fff'], 380, 4);
 }
@@ -1430,8 +1544,7 @@ function updatePlayer(dt){
   }
 
   // 输入
-  let ix = (keys['d']||keys['arrowright']?1:0) - (keys['a']||keys['arrowleft']?1:0);
-  let iy = (keys['s']||keys['arrowdown']?1:0) - (keys['w']||keys['arrowup']?1:0);
+  let { x:ix, y:iy } = moveAxis();
   const il = hyp(ix,iy);
   if(il > 0){ ix/=il; iy/=il; }
   p.moving = il > 0;
@@ -2015,6 +2128,7 @@ function updateFloats(dt){
    13. 波次 / 关卡流程
    ========================================================= */
 function startLevel(idx){
+  enterMobileDisplay();
   G.levelIndex = idx;
   G.level = LEVELS[idx];
   G.state = 'playing';
@@ -2055,7 +2169,7 @@ function startLevel(idx){
     later(()=> hint('Z 旋风斩：群伤并加速 2 秒'), 4200);
     later(()=> hint('X 跃斩：落地大范围伤害并回血 20%'), 7600);
     later(()=> hint('C 裂空投：抓起身边的怪，砸向威胁最高的目标并眩晕'), 11000);
-    later(()=> hint('怒气满后按 V 释放千影滑斩'), 14400);
+    later(()=> hint(IS_TOUCH ? '怒气满后点无影斩' : '怒气满后按 V 释放无影斩'), 14400);
   } else {
     later(()=> hint(G.level.desc), 1200);
   }
@@ -2242,6 +2356,22 @@ function updateHud(){
     setText2(vNode, player.ultT > 0 ? '连斩' : '');
     skillBoxes.v.classList.remove('ready');
     skillBoxes.v.classList.add('cooling');
+  }
+
+  // 闪避冷却（只有触屏按钮需要显示，键鼠下这块 DOM 是隐藏的）
+  if(IS_TOUCH && dodgeCdEl){
+    const cd = player.dashCd, max = 1.05;
+    if(cd > 0){
+      const p = cd / max;
+      const bg = `conic-gradient(rgba(4,2,8,.84) ${(p*360).toFixed(1)}deg, transparent 0deg)`;
+      if(dodgeCdEl.__bg !== bg){ dodgeCdEl.__bg = bg; dodgeCdEl.style.background = bg; }
+      setText2(dodgeCdEl, cd >= 1 ? Math.ceil(cd) : cd.toFixed(1));
+      dodgeEl.classList.add('cooling');
+    } else {
+      if(dodgeCdEl.__bg !== 'none'){ dodgeCdEl.__bg = 'none'; dodgeCdEl.style.background = 'none'; }
+      setText2(dodgeCdEl, '');
+      dodgeEl.classList.remove('cooling');
+    }
   }
 
   // 连击
@@ -3471,6 +3601,7 @@ function showScreen(name){
 function setState(s){
   G.state = s;
   if(s !== 'playing'){
+    resetStick();
     document.getElementById('hud').classList.add('hidden');
   }
 }
@@ -3628,7 +3759,157 @@ document.addEventListener('visibilitychange', ()=>{
 });
 
 /* =========================================================
-   18. 启动
+   18. 触屏操控（手机横屏：左下摇杆 + 右下 1 大 3 小 + 闪避键）
+   ========================================================= */
+const appEl = document.getElementById('app');
+const stickEl = document.getElementById('stick');
+const knobEl = document.getElementById('stickKnob');
+const dodgeEl = document.getElementById('btnDodge');
+const dodgeCdEl = document.getElementById('cdDodge');
+
+function resetStick(){
+  stick.active = false; stick.pointer = null; stick.x = 0; stick.y = 0;
+  const k = document.getElementById('stickKnob');
+  if(k) k.style.transform = 'translate(0,0)';
+}
+
+function readSafeInset(side){
+  const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sai-' + side));
+  return isNaN(v) ? 0 : v;
+}
+
+/* 布局：画布保 16:9 居中，控件尺寸随可用高度缩放，四角贴边并避开刘海 */
+function layoutTouch(){
+  if(!IS_TOUCH) return;
+  const aw = appEl.clientWidth, ah = appEl.clientHeight;
+  const ratio = W / H;
+  let cw = aw, ch = aw / ratio;
+  if(ch > ah){ ch = ah; cw = ah * ratio; }
+  canvas.style.left = ((aw - cw) / 2) + 'px';
+  canvas.style.top  = ((ah - ch) / 2) + 'px';
+  canvas.style.width = cw + 'px';
+  canvas.style.height = ch + 'px';
+
+  // 手机横屏时约 0.20 / 0.145 / 0.115 屏高；平板上封顶，避免按钮巨大
+  const U = clamp(ah * 0.20, 60, 96);     // 无影斩
+  const S = clamp(ah * 0.145, 46, 74);    // 三个小技能
+  const D = clamp(ah * 0.115, 40, 60);    // 闪避
+  const J = clamp(ah * 0.34, 104, 168);   // 摇杆底盘
+
+  const insB = Math.max(10, ah * 0.035) + readSafeInset('bottom');
+  const insL = Math.max(12, aw * 0.03) + readSafeInset('left');
+  const insR = Math.max(12, aw * 0.03) + readSafeInset('right');
+
+  // 摇杆
+  stickEl.style.width = stickEl.style.height = J + 'px';
+  stickEl.style.left = insL + 'px';
+  stickEl.style.bottom = insB + 'px';
+  const knob = Math.round(J * 0.46);
+  knobEl.style.width = knobEl.style.height = knob + 'px';
+  knobEl.style.left = ((J - knob) / 2) + 'px';
+  knobEl.style.top  = ((J - knob) / 2) + 'px';
+  knobEl.style.transform = 'translate(0,0)';
+  stick.R  = J * 0.30;   // 摇杆头可推到的半径
+  stick.dz = J * 0.10;   // 死区，手指轻微抖动不产生位移
+
+  // 技能簇：大招贴右下角，三个小技能沿左上方 14°/44°/74° 弧线排开
+  const R = U / 2 + S / 2 + 10;
+  const arc = [['z', 14], ['x', 44], ['c', 74]];
+  for(const [k, deg] of arc){
+    const b = skillBoxes[k];
+    const a = deg * Math.PI / 180;
+    b.style.width = b.style.height = S + 'px';
+    b.style.right  = (insR + U / 2 - S / 2 + R * Math.sin(a)).toFixed(1) + 'px';
+    b.style.bottom = (insB + U / 2 - S / 2 + R * Math.cos(a)).toFixed(1) + 'px';
+    const t = b.querySelector('b');
+    if(t) t.style.fontSize = Math.round(S * 0.44) + 'px';
+  }
+  const vb = skillBoxes.v;
+  vb.style.width = vb.style.height = U + 'px';
+  vb.style.right  = insR + 'px';
+  vb.style.bottom = insB + 'px';
+  const vt = vb.querySelector('b');
+  if(vt) vt.style.fontSize = Math.round(U * 0.34) + 'px';
+
+  // 闪避键：贴在技能簇左侧，比小技能再低一点，拇指自然够到
+  dodgeEl.style.width = dodgeEl.style.height = D + 'px';
+  dodgeEl.style.right  = (insR + U / 2 + R * Math.sin(74 * Math.PI / 180) + S / 2 + 12).toFixed(1) + 'px';
+  dodgeEl.style.bottom = (insB + 8).toFixed(1) + 'px';
+  const db = dodgeEl.querySelector('b');
+  if(db) db.style.fontSize = Math.round(D * 0.32) + 'px';
+}
+
+function stickMove(e){
+  if(!stick.active || e.pointerId !== stick.pointer) return;
+  const dx = e.clientX - stick.cx, dy = e.clientY - stick.cy;
+  const d = Math.hypot(dx, dy);
+  if(d <= stick.dz){
+    stick.x = 0; stick.y = 0;
+    knobEl.style.transform = 'translate(0,0)';
+    return;
+  }
+  const nx = dx / d, ny = dy / d;         // 过死区即满速，方向连续，能精确到 16 方
+  const cl = Math.min(d, stick.R);
+  stick.x = nx; stick.y = ny;
+  knobEl.style.transform = `translate(${(nx * cl).toFixed(1)}px,${(ny * cl).toFixed(1)}px)`;
+}
+
+/* 进游戏时尝试全屏 + 锁横屏；失败就让竖屏提示层去兜底 */
+function enterMobileDisplay(){
+  if(!IS_TOUCH) return;
+  try{
+    const de = document.documentElement;
+    if(!document.fullscreenElement && de.requestFullscreen){
+      const p = de.requestFullscreen({ navigationUI:'hide' });
+      if(p && p.catch) p.catch(()=>{});
+    }
+  }catch(_){}
+  try{
+    if(screen.orientation && screen.orientation.lock){
+      const p = screen.orientation.lock('landscape');
+      if(p && p.catch) p.catch(()=>{});
+    }
+  }catch(_){}
+}
+
+if(IS_TOUCH){
+  // 摇杆：按下定基准点（同一颗底盘，跟手不漂移），抬手/失焦一律归零
+  stickEl.addEventListener('pointerdown', e=>{
+    if(G.state !== 'playing') return;
+    e.preventDefault();
+    const r = stickEl.getBoundingClientRect();
+    stick.cx = r.left + r.width / 2;
+    stick.cy = r.top + r.height / 2;
+    stick.pointer = e.pointerId;
+    stick.active = true;
+    try{ stickEl.setPointerCapture(e.pointerId); }catch(_){}
+    stickMove(e);
+  });
+  stickEl.addEventListener('pointermove', stickMove);
+  stickEl.addEventListener('pointerup', e=>{ if(e.pointerId === stick.pointer) resetStick(); });
+  stickEl.addEventListener('pointercancel', e=>{ if(e.pointerId === stick.pointer) resetStick(); });
+  stickEl.addEventListener('lostpointercapture', e=>{ if(e.pointerId === stick.pointer) resetStick(); });
+
+  // 技能键：按下即放，不等抬手，免得高节奏连招漏技能
+  for(const [k, fn] of [['z', castZ], ['x', castX], ['c', castC], ['v', castV]]){
+    const b = skillBoxes[k];
+    b.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); fn(); });
+  }
+  dodgeEl.addEventListener('pointerdown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    if(G.state === 'playing') dodge();
+  });
+
+  layoutTouch();
+  window.addEventListener('resize', layoutTouch);
+  window.addEventListener('load', layoutTouch);
+  setTimeout(layoutTouch, 320);
+  window.addEventListener('orientationchange', ()=> setTimeout(layoutTouch, 260));
+  document.addEventListener('fullscreenchange', ()=> setTimeout(layoutTouch, 200));
+}
+
+/* =========================================================
+   19. 启动
    ========================================================= */
 ribbon.reset(W*0.72, H*0.80-103);
 window.__DI = { G, player, LEVELS, spawnEnemy, makeEnemy, startLevel, spawnBoss, ENEMY_TYPES,
