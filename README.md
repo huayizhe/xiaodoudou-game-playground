@@ -6,7 +6,7 @@
 
 | 路径 | 说明 |
 | --- | --- |
-| `小豆豆游戏广场.html` | 入口页：卡片式游戏墙，点击进游戏、随时返回广场 |
+| `index.html` | 入口页（游戏广场）：卡片式游戏墙，点击进游戏、随时返回广场 |
 | `小豆闯关记.html` | 横版闯关（10 关） |
 | `植物大战僵尸.html` | 塔防策略 |
 | `火柴人勇闯恶魔岛.html` | 动作格斗（5 关，自动锁敌 + Z X C V 四技能） |
@@ -17,21 +17,23 @@
 
 ## 打开
 
-双击 `小豆豆游戏广场.html`。游戏在页面内的全屏舞台打开，顶栏常驻「返回广场」。
+双击 `index.html`。游戏在页面内的全屏舞台打开，顶栏常驻「返回广场」。
 
 ## 在线试玩
 
-《火柴人勇闯恶魔岛》已通过 GitHub Pages 上线，浏览器打开即玩：
+GitHub Pages 已上线整个广场，根路径就是入口页：
 
 <https://huayizhe.github.io/xiaodoudou-game-playground/>
 
-根路径访问的是 `index.html`，它由 `火柴人勇闯恶魔岛.html` 复制而来，仅作为 Pages 首页入口。修改游戏后需要重新复制一次：
+各游戏有独立地址，可直接打开或分享：
 
-```powershell
-Copy-Item -LiteralPath ".\火柴人勇闯恶魔岛.html" -Destination ".\index.html" -Force
-```
+| 游戏 | 在线地址 |
+| --- | --- |
+| 小豆闯关记 | <https://huayizhe.github.io/xiaodoudou-game-playground/小豆闯关记.html> |
+| 植物大战僵尸 | <https://huayizhe.github.io/xiaodoudou-game-playground/植物大战僵尸.html> |
+| 火柴人勇闯恶魔岛 | <https://huayizhe.github.io/xiaodoudou-game-playground/火柴人勇闯恶魔岛.html> |
 
-其他游戏也可通过中文文件名直接访问，例如 `.../小豆豆游戏广场.html`。
+根路径的 `index.html` 就是广场页本体，改完直接提交推送即可，不需要复制副本。
 
 ## 文档
 
