@@ -38,10 +38,10 @@
 </head>
 <body>
 <h1>音效<span>定位</span> · 单独试听</h1>
-<p class="sub">每个按钮只播这一条音效，方便逐条核对。桌面试玩时听到的那个“嗡嗡”单独音，最可能落在这里的某一条——先别改，找到名字再说。</p>
+<p class="sub">每个按钮只播这一条音效，方便逐条核对。此页与游戏内的版本保持同步：波次「wave」和无影斩「ult」已按反馈重做过，可以按新版听。</p>
 <div class="note">
-  <b>重点嫌疑：</b>「波次 wave」——110Hz / 220Hz 锯齿波叠出来的 0.55 秒低鸣，听感最像电流嗡嗡；
-  其次是「BOSS 阶段 boss」的 55Hz 深吼，和「受伤 hurt」的 260→80Hz 锯齿扫频。先点这三条对比一下。
+  <b>已确认并改版：</b>「波次 wave」——原来那声 110Hz / 220Hz 锯齿低鸣就是开场“像放屁”的音，已换成 D5→A5 两声清脆铃音叠上扬空气声；
+  「无影斩 ult」原来的 80→520Hz 锯齿滑音也换掉了，改成蓄力吸气 → 低频冲击 → 金属斩击 → 和弦余韵。其余 15 条音效未动。
 </div>
 <div class="tools">
   <button class="pill" id="btnMusic">循环背景音乐（对照，非嫌疑）</button>
@@ -127,9 +127,12 @@ const AudioSys = {
         this.noise({dur:.4, f0:600, f1:2400, vol:.2, q:1.4});
         this.tone({type:'triangle', f0:200, f1:520, dur:.35, vol:.12}); break;
       case 'ult':
-        this.tone({type:'sawtooth', f0:80, f1:520, dur:.7, vol:.24});
-        this.noise({dur:.8, f0:300, f1:3000, vol:.24, q:1});
-        this.tone({type:'sine', f0:60, f1:40, dur:1.1, vol:.32, delay:.1}); break;
+        this.noise({dur:.26, f0:180, f1:1500, vol:.1, q:.55});
+        this.tone({type:'sine', f0:98, f1:62, dur:.5, vol:.26, delay:.14});
+        this.tone({type:'triangle', f0:220, f1:220, dur:.5, vol:.085, delay:.14});
+        this.tone({type:'triangle', f0:330, f1:330, dur:.5, vol:.07, delay:.14});
+        this.tone({type:'sine', f0:440, f1:440, dur:.42, vol:.05, delay:.14});
+        this.noise({dur:.32, f0:3600, f1:700, vol:.24, q:.9, delay:.14}); break;
       case 'heal':
         [523,659,784].forEach((f,i)=> this.tone({type:'sine', f0:f, f1:f*1.02, dur:.32, vol:.09, delay:i*0.06})); break;
       case 'pickup': this.tone({type:'triangle', f0:880, f1:1320, dur:.1, vol:.1}); break;
@@ -137,8 +140,10 @@ const AudioSys = {
         this.tone({type:'sine', f0:140, f1:32, dur:.7, vol:.3});
         this.noise({dur:.5, f0:600, f1:120, vol:.2}); break;
       case 'wave':
-        this.tone({type:'sawtooth', f0:110, f1:165, dur:.55, vol:.16});
-        this.tone({type:'sawtooth', f0:220, f1:330, dur:.55, vol:.1, delay:.05}); break;
+        this.tone({type:'sine', f0:587.33, f1:587.33, dur:.28, vol:.12});
+        this.tone({type:'sine', f0:880, f1:880, dur:.44, vol:.1, delay:.15});
+        this.tone({type:'triangle', f0:293.66, f1:293.66, dur:.36, vol:.045, delay:.02});
+        this.noise({dur:.34, f0:220, f1:760, vol:.07, q:.6}); break;
       case 'ui': this.tone({type:'triangle', f0:660, f1:990, dur:.08, vol:.08}); break;
       case 'boss':
         this.tone({type:'sawtooth', f0:55, f1:90, dur:1.4, vol:.3});
@@ -184,7 +189,7 @@ const AudioSys = {
 
 const SOUNDS = [
   { id:'wave', name:'波次开始', en:'wave', hot:true,
-    desc:'关卡开场、每一波开始、巫妖/BOSS 召唤小怪时播。110Hz + 220Hz 锯齿波双低鸣 0.55 秒——最像电流嗡嗡的一条。' },
+    desc:'关卡开场、每一波开始、巫妖/BOSS 召唤小怪时播。已改版：旧版是 110Hz + 220Hz 锯齿双低鸣（那声像放屁的开场音），现为 D5→A5 两声纯正弦铃音 + 上扬空气声。' },
   { id:'boss', name:'BOSS 阶段切换', en:'boss', hot:true,
     desc:'魔王进入二、三阶段时播。55Hz 锯齿深吼 1.4 秒 + 低频噪声，声音更闷更沉。' },
   { id:'hurt', name:'玩家受伤', en:'hurt', hot:true,
@@ -206,7 +211,7 @@ const SOUNDS = [
   { id:'spin', name:'旋风斩', en:'spin',
     desc:'Z 技能。噪声 600→2400 上扬 + 三角波 200→520，旋转的风声。' },
   { id:'ult', name:'无影斩', en:'ult',
-    desc:'V 大招。80→520Hz 锯齿扫频 + 长噪声 + 60→40 低频正弦，长“呜——”。' },
+    desc:'V 大招。已改版：旧版是 80→520Hz 锯齿滑音 + 长噪声 + 60→40 低频正弦；现为蓄力吸气 → 低频冲击 → 金属斩击 → 220/330/440 和弦余韵。' },
   { id:'heal', name:'回血 / 过关', en:'heal',
     desc:'裂地跃斩回血、关卡胜利。523/659/784 三个正弦音，明亮。' },
   { id:'pickup', name:'拾取', en:'pickup',
