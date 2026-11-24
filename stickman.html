@@ -144,7 +144,9 @@
     -webkit-background-clip:text;background-clip:text;
     filter:drop-shadow(0 0 18px rgba(255,45,45,.45))}
   .stars-big{font-size:26px;letter-spacing:.18em;color:var(--gold);margin-bottom:18px;text-shadow:0 0 18px rgba(255,176,32,.55)}
-  .modal .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  /* 暂停 / 结算底部的按钮不管字数多少一律等宽（3 等分栅格），避免长短不齐 */
+  .modal .row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .modal .row .btn{width:100%;padding-left:10px;padding-right:10px;white-space:nowrap}
   .tip-line{font-size:11.5px;color:rgba(243,237,224,.4);margin-top:16px;letter-spacing:.06em}
 
   /* ---------- HUD ---------- */
@@ -334,6 +336,19 @@
     font-size:13px;font-weight:900;color:#fff;text-shadow:0 1px 4px #000;border-radius:50%}
   body.touch-mode .tbtn.cooling b{opacity:.3}
 
+  /* 暂停 / 结算面板：手机端收内边距，三颗按钮等分时不挤字 */
+  body.touch-mode .modal{padding:24px 22px;max-width:min(88vw,420px)}
+  body.touch-mode .modal h2{font-size:22px;letter-spacing:.16em}
+  body.touch-mode .modal .r-sub{font-size:10.5px;margin-bottom:14px}
+  body.touch-mode .modal .row .btn{padding:12px 6px;font-size:14px;letter-spacing:.06em}
+  /* touch-only 是 display:flex，提示行要显式居中，否则会贴左边 */
+  body.touch-mode .tip-line{justify-content:center;text-align:center}
+  /* 竖屏面板窄，统计格的字要压小并禁止换行，否则「最高连击」被挤成两行 */
+  body.touch-mode .stat-grid{gap:6px;margin-bottom:14px}
+  body.touch-mode .stat-cell{padding:9px 4px}
+  body.touch-mode .stat-cell b{font-size:19px}
+  body.touch-mode .stat-cell span{font-size:9px;letter-spacing:.04em;white-space:nowrap}
+
   /* 竖屏：不挡游戏，只在顶部挂一条轻提示，界面照常加载可玩 */
   .rotate-hint{display:none}
   .rotate-hint.rh-off{display:none!important}
@@ -397,7 +412,7 @@
     body.touch-mode .rank{font-size:32px;margin-bottom:0;line-height:1.15;padding:.02em .04em}
     body.touch-mode .stars-big{font-size:17px;letter-spacing:.1em;margin-bottom:6px}
     body.touch-mode .modal .row{gap:8px}
-    body.touch-mode .modal .row .btn{padding:9px 16px;font-size:13px}
+    body.touch-mode .modal .row .btn{padding:9px 6px;font-size:13px;letter-spacing:.06em}
     body.touch-mode .tip-line{margin-top:8px;font-size:10px}
   }
 </style>
