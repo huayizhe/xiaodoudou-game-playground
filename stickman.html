@@ -252,8 +252,8 @@
   body.touch-mode canvas{position:absolute;width:100%;height:100%}
 
   /* HUD 重排：信息收进顶部一条，血条缩小，战场中央与右下留空 */
-  body.touch-mode .hud-top{top:calc(6px + var(--sai-top));left:calc(8px + var(--sai-left));
-    right:calc(8px + var(--sai-right));gap:8px;align-items:flex-start}
+  body.touch-mode .hud-top{top:calc(8px + var(--sai-top));left:calc(12px + var(--sai-left));
+    right:calc(12px + var(--sai-right));gap:8px;align-items:flex-start}
   body.touch-mode .level-info{padding:5px 10px 6px;border-radius:10px;
     background:rgba(8,6,14,.74);border-color:rgba(255,255,255,.12);backdrop-filter:blur(6px)}
   body.touch-mode .lv-name{font-size:11.5px;letter-spacing:.08em;line-height:1.25}
@@ -262,13 +262,13 @@
   body.touch-mode .hud-stat b{font-size:11.5px}
   body.touch-mode .icon-btn{width:38px;height:38px;font-size:15px;border-radius:11px;
     background:rgba(8,6,14,.74);backdrop-filter:blur(6px)}
-  body.touch-mode .combo{position:absolute;top:calc(50px + var(--sai-top));
-    right:calc(10px + var(--sai-right));gap:3px}
+  body.touch-mode .combo{position:absolute;top:calc(52px + var(--sai-top));
+    right:calc(14px + var(--sai-right));gap:3px}
   body.touch-mode .combo span{font-size:21px}
   body.touch-mode .combo small{font-size:9px}
 
   /* 血条：宽度压到屏宽四分之一上下，两层叠在关卡名下面，不压战场 */
-  body.touch-mode .vitals-slot{left:calc(8px + var(--sai-left));top:calc(46px + var(--sai-top));
+  body.touch-mode .vitals-slot{left:calc(12px + var(--sai-left));top:calc(48px + var(--sai-top));
     bottom:auto;width:clamp(148px,26vw,206px)}
   body.touch-mode .vitals{width:100%;gap:4px;filter:drop-shadow(0 3px 9px rgba(0,0,0,.55))}
   body.touch-mode .vitals .bar{height:13px;border-radius:7px;border-color:rgba(255,255,255,.16)}
@@ -705,9 +705,13 @@ const AudioSys = {
         this.noise({dur:.4, f0:600, f1:2400, vol:.2, q:1.4});
         this.tone({type:'triangle', f0:200, f1:520, dur:.35, vol:.12}); break;
       case 'ult':
-        this.tone({type:'sawtooth', f0:80, f1:520, dur:.7, vol:.24});
-        this.noise({dur:.8, f0:300, f1:3000, vol:.24, q:1});
-        this.tone({type:'sine', f0:60, f1:40, dur:1.1, vol:.32, delay:.1}); break;
+        // 无影斩：吸气蓄力 → 低频冲击 → 金属斩击 → 和弦余韵；不再用锯齿扫频，避免滑音怪叫
+        this.noise({dur:.26, f0:180, f1:1500, vol:.1, q:.55});
+        this.tone({type:'sine', f0:98, f1:62, dur:.5, vol:.26, delay:.14});
+        this.tone({type:'triangle', f0:220, f1:220, dur:.5, vol:.085, delay:.14});
+        this.tone({type:'triangle', f0:330, f1:330, dur:.5, vol:.07, delay:.14});
+        this.tone({type:'sine', f0:440, f1:440, dur:.42, vol:.05, delay:.14});
+        this.noise({dur:.32, f0:3600, f1:700, vol:.24, q:.9, delay:.14}); break;
       case 'heal':
         [523,659,784].forEach((f,i)=> this.tone({type:'sine', f0:f, f1:f*1.02, dur:.32, vol:.09, delay:i*0.06})); break;
       case 'pickup': this.tone({type:'triangle', f0:880, f1:1320, dur:.1, vol:.1}); break;
@@ -715,8 +719,11 @@ const AudioSys = {
         this.tone({type:'sine', f0:140, f1:32, dur:.7, vol:.3});
         this.noise({dur:.5, f0:600, f1:120, vol:.2}); break;
       case 'wave':
-        this.tone({type:'sawtooth', f0:110, f1:165, dur:.55, vol:.16});
-        this.tone({type:'sawtooth', f0:220, f1:330, dur:.55, vol:.1, delay:.05}); break;
+        // 波次提示（进关卡/每波开始）：D5 → A5 两声纯正弦铃音，叠一层上扬的空气声
+        this.tone({type:'sine', f0:587.33, f1:587.33, dur:.28, vol:.12});
+        this.tone({type:'sine', f0:880, f1:880, dur:.44, vol:.1, delay:.15});
+        this.tone({type:'triangle', f0:293.66, f1:293.66, dur:.36, vol:.045, delay:.02});
+        this.noise({dur:.34, f0:220, f1:760, vol:.07, q:.6}); break;
       case 'ui': this.tone({type:'triangle', f0:660, f1:990, dur:.08, vol:.08}); break;
       case 'boss':
         this.tone({type:'sawtooth', f0:55, f1:90, dur:1.4, vol:.3});
@@ -3898,9 +3905,10 @@ function layoutTouch(){
   const D = clamp(short * 0.105, 36, 52);    // 闪避
   const J = clamp(short * 0.30, 96, 150);    // 摇杆底盘
 
-  const insB = Math.max(8, short * 0.03) + readSafeInset('bottom');
-  const insL = Math.max(10, aw * 0.025) + readSafeInset('left');
-  const insR = Math.max(10, aw * 0.025) + readSafeInset('right');
+  // 边距：比上一版整体内收，按键不再贴着屏幕边框（刘海/圆角机的安全区另行叠加）
+  const insB = Math.max(16, short * 0.06) + readSafeInset('bottom');
+  const insL = Math.max(16, aw * 0.05) + readSafeInset('left');
+  const insR = Math.max(18, aw * 0.05) + readSafeInset('right');
 
   // 摇杆
   stickEl.style.width = stickEl.style.height = J + 'px';
@@ -3914,7 +3922,7 @@ function layoutTouch(){
   stick.R  = J * 0.30;   // 摇杆头可推到的半径
   stick.dz = J * 0.10;   // 死区，手指轻微抖动不产生位移
 
-  // 大招压右下角（最靠外、默认最大），三个小技能从它左侧起步向左上弧线展开：Z 最低 → X → C 最高
+  // 大招压右下角（最靠外、默认最大）
   const vb = skillBoxes.v;
   vb.style.width = vb.style.height = U + 'px';
   vb.style.right  = insR + 'px';
@@ -3922,24 +3930,31 @@ function layoutTouch(){
   const vt = vb.querySelector('b');
   if(vt) vt.style.fontSize = Math.round(U * 0.40) + 'px';
 
-  const gap = Math.max(6, U * 0.10);
-  const stepX = S * 0.46, stepY = S * 0.88;
-  let sx = insR + U + gap;   // Z 的右边缘：紧贴大招左侧
-  let sy = insB + 2;         // Z 的下边缘：与大招同底
-  for(const k of ['z','x','c']){
+  // 三个小技能沿「以无影斩圆心为圆心」的真正圆弧展开：Z 最低（与大招同高）→ X → C 最高
+  const oX = aw - insR - U / 2, oY = ah - insB - U / 2;
+  const gap   = Math.max(8, U * 0.11);
+  const chord = S + gap;                       // 相邻两颗的圆心距，保证不叠压
+  const stepA = 36 * Math.PI / 180;            // 每步转角，整段 72° 的弧
+  const Rarc  = chord / (2 * Math.sin(stepA / 2));
+  let zCx = 0, zCy = 0;
+  ['z','x','c'].forEach((k, i)=>{
+    const a  = 180 * Math.PI / 180 + stepA * i;
+    const cx = oX + Rarc * Math.cos(a);
+    const cy = oY + Rarc * Math.sin(a);
+    if(i === 0){ zCx = cx; zCy = cy; }
     const b = skillBoxes[k];
     b.style.width = b.style.height = S + 'px';
-    b.style.right  = sx.toFixed(1) + 'px';
-    b.style.bottom = sy.toFixed(1) + 'px';
+    b.style.right  = (aw - cx - S / 2).toFixed(1) + 'px';
+    b.style.bottom = (ah - cy - S / 2).toFixed(1) + 'px';
     const t = b.querySelector('b');
     if(t) t.style.fontSize = Math.round(S * 0.44) + 'px';
-    sx += stepX; sy += stepY;
-  }
+  });
 
-  // 闪避键：压在小技能左下，拇指横向一挪就能按到
+  // 闪避键：Z 左侧同一水平线上，拇指从摇杆区往右一挪就能按到
+  const dGap = Math.max(9, S * 0.24);
   dodgeEl.style.width = dodgeEl.style.height = D + 'px';
-  dodgeEl.style.right  = (insR + U + gap + S + Math.max(7, S * 0.18)).toFixed(1) + 'px';
-  dodgeEl.style.bottom = (insB + 2).toFixed(1) + 'px';
+  dodgeEl.style.right  = (aw - zCx + S / 2 + dGap).toFixed(1) + 'px';
+  dodgeEl.style.bottom = (ah - zCy - D / 2).toFixed(1) + 'px';
   const db = dodgeEl.querySelector('b');
   if(db) db.style.fontSize = Math.round(D * 0.32) + 'px';
 }
