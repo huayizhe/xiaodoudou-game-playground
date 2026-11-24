@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>音效定位 · 火柴人勇闯恶魔岛</title>
+<style>
+  :root{--ink:#07060d;--bone:#f3ede0;--red:#ff3b30;--line:rgba(255,255,255,.12)}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{min-height:100%;background:radial-gradient(circle at 50% 0%,#1b1020,#08060e 60%,#05040a);
+    color:var(--bone);font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif}
+  body{padding:22px 18px 40px;max-width:1080px;margin:0 auto}
+  h1{font-size:clamp(20px,3.4vw,30px);letter-spacing:.12em;margin-bottom:8px}
+  h1 span{color:#ff5a4a}
+  .sub{font-size:12.5px;line-height:1.75;color:rgba(243,237,224,.62);margin-bottom:18px}
+  .note{background:rgba(255,90,90,.08);border:1px solid rgba(255,90,90,.28);border-radius:10px;
+    padding:12px 14px;font-size:12.5px;line-height:1.8;color:#ffd9cf;margin-bottom:20px}
+  .note b{color:#fff}
+  .tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+  .pill{padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.06);
+    border:1px solid var(--line);color:rgba(243,237,224,.82);font-size:13px;cursor:pointer}
+  .pill.on{border-color:rgba(255,120,90,.7);background:rgba(255,59,48,.16);color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+  .item{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:12px;
+    background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
+    border:1px solid var(--line);cursor:pointer;text-align:left;transition:.15s;position:relative}
+  .item:hover{border-color:rgba(255,120,90,.55);transform:translateY(-1px)}
+  .item:active{transform:scale(.98)}
+  .item.playing{border-color:rgba(255,180,80,.8);box-shadow:0 0 18px rgba(255,120,60,.25)}
+  .item.hot{border-color:rgba(255,80,60,.55);background:linear-gradient(160deg,rgba(255,60,40,.14),rgba(255,255,255,.02))}
+  .k{font-size:11px;letter-spacing:.14em;color:#ff8a6a;font-weight:700}
+  .n{font-size:15px;font-weight:700;letter-spacing:.04em}
+  .d{font-size:11.5px;line-height:1.6;color:rgba(243,237,224,.55)}
+  .tag{position:absolute;right:10px;top:10px;font-size:10px;padding:2px 7px;border-radius:999px;
+    background:rgba(255,60,40,.22);color:#ffc9bd;border:1px solid rgba(255,90,70,.4)}
+  .foot{margin-top:22px;font-size:12px;line-height:1.8;color:rgba(243,237,224,.42)}
+</style>
+</head>
+<body>
+<h1>音效<span>定位</span> · 单独试听</h1>
+<p class="sub">每个按钮只播这一条音效，方便逐条核对。桌面试玩时听到的那个“嗡嗡”单独音，最可能落在这里的某一条——先别改，找到名字再说。</p>
+<div class="note">
+  <b>重点嫌疑：</b>「波次 wave」——110Hz / 220Hz 锯齿波叠出来的 0.55 秒低鸣，听感最像电流嗡嗡；
+  其次是「BOSS 阶段 boss」的 55Hz 深吼，和「受伤 hurt」的 260→80Hz 锯齿扫频。先点这三条对比一下。
+</div>
+<div class="tools">
+  <button class="pill" id="btnMusic">循环背景音乐（对照，非嫌疑）</button>
+  <button class="pill" id="btnMute">静音</button>
+</div>
+<div class="grid" id="grid"></div>
+<p class="foot">说明：全部音效都由 Web Audio 实时合成，没有音频文件；本条页面不改游戏，只做试听定位。</p>
+
+<script>
+(function(){
+'use strict';
+const AudioSys = {
+  ctx:null, master:null, muted:false, musicOn:false, timer:null, step:0, nextT:0,
+  init(){
+    if(this.ctx){ if(this.ctx.state==='suspended') this.ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    try{
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.muted ? 0 : 0.55;
+      this.master.connect(this.ctx.destination);
+    }catch(err){ this.ctx = null; }
+  },
+  setMuted(m){
+    this.muted = m;
+    if(this.master) this.master.gain.setTargetAtTime(m?0:0.55, this.ctx.currentTime, 0.05);
+  },
+  tone(o){
+    if(!this.ctx || this.muted) return;
+    const c=this.ctx, t=c.currentTime + (o.delay||0);
+    const osc=c.createOscillator(), g=c.createGain();
+    osc.type = o.type||'sine';
+    osc.frequency.setValueAtTime(o.f0||440, t);
+    if(o.f1) osc.frequency.exponentialRampToValueAtTime(Math.max(1,o.f1), t+(o.dur||0.1));
+    const v = o.vol==null?0.18:o.vol;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(v, t+(o.atk||0.005));
+    g.gain.exponentialRampToValueAtTime(0.0001, t+(o.dur||0.1));
+    osc.connect(g); g.connect(this.master);
+    osc.start(t); osc.stop(t+(o.dur||0.1)+0.03);
+  },
+  noise(o){
+    if(!this.ctx || this.muted) return;
+    const c=this.ctx, t=c.currentTime + (o.delay||0);
+    const len = Math.floor(c.sampleRate * (o.dur||0.15));
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * (1 - i/len);
+    const src = c.createBufferSource(); src.buffer = buf;
+    const f = c.createBiquadFilter(); f.type = o.filter||'bandpass';
+    f.frequency.setValueAtTime(o.f0||1200, t);
+    if(o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t+(o.dur||0.15));
+    f.Q.value = o.q||1;
+    const g = c.createGain();
+    g.gain.setValueAtTime(o.vol||0.2, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+(o.dur||0.15));
+    src.connect(f); f.connect(g); g.connect(this.master);
+    src.start(t);
+  },
+  sfx(name){
+    if(!this.ctx) return;
+    switch(name){
+      case 'slash': this.noise({dur:.13, f0:2600, f1:700, vol:.16, q:.8}); break;
+      case 'slash2': this.noise({dur:.1, f0:1800, f1:400, vol:.13, q:.7}); break;
+      case 'hit':
+        this.tone({type:'square', f0:190, f1:70, dur:.09, vol:.14});
+        this.noise({dur:.06, f0:900, vol:.1}); break;
+      case 'crit':
+        this.tone({type:'sawtooth', f0:320, f1:90, dur:.16, vol:.2});
+        this.noise({dur:.12, f0:2200, f1:300, vol:.18}); break;
+      case 'hurt':
+        this.tone({type:'sawtooth', f0:260, f1:80, dur:.28, vol:.22});
+        this.noise({dur:.2, f0:500, vol:.16}); break;
+      case 'jump': this.tone({type:'sine', f0:280, f1:640, dur:.2, vol:.14}); break;
+      case 'land':
+        this.tone({type:'sine', f0:120, f1:38, dur:.35, vol:.3});
+        this.noise({dur:.3, f0:400, f1:100, vol:.25}); break;
+      case 'whip':
+        this.noise({dur:.16, f0:3200, f1:600, vol:.2, q:2});
+        this.tone({type:'triangle', f0:900, f1:300, dur:.14, vol:.1}); break;
+      case 'spin':
+        this.noise({dur:.4, f0:600, f1:2400, vol:.2, q:1.4});
+        this.tone({type:'triangle', f0:200, f1:520, dur:.35, vol:.12}); break;
+      case 'ult':
+        this.tone({type:'sawtooth', f0:80, f1:520, dur:.7, vol:.24});
+        this.noise({dur:.8, f0:300, f1:3000, vol:.24, q:1});
+        this.tone({type:'sine', f0:60, f1:40, dur:1.1, vol:.32, delay:.1}); break;
+      case 'heal':
+        [523,659,784].forEach((f,i)=> this.tone({type:'sine', f0:f, f1:f*1.02, dur:.32, vol:.09, delay:i*0.06})); break;
+      case 'pickup': this.tone({type:'triangle', f0:880, f1:1320, dur:.1, vol:.1}); break;
+      case 'death':
+        this.tone({type:'sine', f0:140, f1:32, dur:.7, vol:.3});
+        this.noise({dur:.5, f0:600, f1:120, vol:.2}); break;
+      case 'wave':
+        this.tone({type:'sawtooth', f0:110, f1:165, dur:.55, vol:.16});
+        this.tone({type:'sawtooth', f0:220, f1:330, dur:.55, vol:.1, delay:.05}); break;
+      case 'ui': this.tone({type:'triangle', f0:660, f1:990, dur:.08, vol:.08}); break;
+      case 'boss':
+        this.tone({type:'sawtooth', f0:55, f1:90, dur:1.4, vol:.3});
+        this.noise({dur:1.2, f0:200, f1:60, vol:.24}); break;
+      case 'explode':
+        this.tone({type:'sine', f0:90, f1:26, dur:.5, vol:.34});
+        this.noise({dur:.45, f0:1200, f1:150, vol:.3}); break;
+    }
+  },
+  startMusic(){
+    if(this.musicOn || !this.ctx) return;
+    this.musicOn = true;
+    this.nextT = this.ctx.currentTime + 0.1;
+    this.step = 0;
+    const scale = [0,3,5,7,10];
+    const tick = ()=>{
+      if(!this.ctx) return;
+      while(this.nextT < this.ctx.currentTime + 0.25){
+        const s = this.step % 32;
+        const t = this.nextT;
+        if(s % 8 === 0) this.tone({type:'sine', f0:130, f1:44, dur:.22, vol:.22, delay:t-this.ctx.currentTime});
+        if(s % 16 === 8) this.noise({dur:.12, f0:1800, f1:500, vol:.08, delay:t-this.ctx.currentTime});
+        if(s % 4 === 2) this.noise({dur:.05, f0:6000, f1:8000, vol:.035, delay:t-this.ctx.currentTime});
+        if(s % 2 === 0){
+          const n = scale[(s/2)%scale.length];
+          const f = 55 * Math.pow(2, n/12);
+          this.tone({type:'triangle', f0:f, f1:f, dur:.24, vol:.075, delay:t-this.ctx.currentTime});
+        }
+        if(s % 4 === 0 && Math.random() < 0.55){
+          const n = scale[randi(0,4)] + 12;
+          const f = 220 * Math.pow(2, n/12);
+          this.tone({type:'sine', f0:f, f1:f*1.005, dur:.5, vol:.035, delay:t-this.ctx.currentTime});
+        }
+        this.nextT += 0.125;
+        this.step++;
+      }
+      this.timer = setTimeout(tick, 60);
+    };
+    const randi = (a,b)=> a+Math.floor(Math.random()*(b-a+1));
+    tick();
+  }
+};
+
+const SOUNDS = [
+  { id:'wave', name:'波次开始', en:'wave', hot:true,
+    desc:'关卡开场、每一波开始、巫妖/BOSS 召唤小怪时播。110Hz + 220Hz 锯齿波双低鸣 0.55 秒——最像电流嗡嗡的一条。' },
+  { id:'boss', name:'BOSS 阶段切换', en:'boss', hot:true,
+    desc:'魔王进入二、三阶段时播。55Hz 锯齿深吼 1.4 秒 + 低频噪声，声音更闷更沉。' },
+  { id:'hurt', name:'玩家受伤', en:'hurt', hot:true,
+    desc:'被敌人打到时播。260→80Hz 锯齿扫频 + 噪声，0.28 秒，带一点电流味。' },
+  { id:'crit', name:'重击 / 连击里程碑', en:'crit',
+    desc:'20/50/100/200 连击时播。320→90Hz 锯齿波 + 高频噪声，短促尖锐。' },
+  { id:'hit', name:'普攻命中', en:'hit',
+    desc:'每一刀打中敌人。190→70Hz 方波 0.09 秒，干脆的“啪”。' },
+  { id:'slash', name:'挥砍（一段）', en:'slash',
+    desc:'普攻第 1 段。高频噪声短切，纯“唰”声。' },
+  { id:'slash2', name:'挥砍（二三段）', en:'slash2',
+    desc:'普攻第 2、3 段。噪声更低更短。' },
+  { id:'jump', name:'跃起', en:'jump',
+    desc:'X 裂地跃斩起跳。280→640Hz 正弦上滑，轻盈。' },
+  { id:'land', name:'落地 / 裂地跃斩', en:'land',
+    desc:'起跳落地、技能落地。120→38Hz 正弦 + 低频噪声，厚实的“咚”。' },
+  { id:'whip', name:'裂空投 / 鞭击', en:'whip',
+    desc:'抓投与甩击。噪声 3200→600 + 三角波，尖锐的“嗖”。' },
+  { id:'spin', name:'旋风斩', en:'spin',
+    desc:'Z 技能。噪声 600→2400 上扬 + 三角波 200→520，旋转的风声。' },
+  { id:'ult', name:'无影斩', en:'ult',
+    desc:'V 大招。80→520Hz 锯齿扫频 + 长噪声 + 60→40 低频正弦，长“呜——”。' },
+  { id:'heal', name:'回血 / 过关', en:'heal',
+    desc:'裂地跃斩回血、关卡胜利。523/659/784 三个正弦音，明亮。' },
+  { id:'pickup', name:'拾取', en:'pickup',
+    desc:'捡到补给。880→1320Hz 三角波，短促清脆。' },
+  { id:'death', name:'敌人死亡 / 失败', en:'death',
+    desc:'小怪死亡、挑战失败。140→32Hz 正弦 + 噪声，下沉的“呼”。' },
+  { id:'ui', name:'按钮点击', en:'ui',
+    desc:'所有界面按钮。660→990Hz 三角波，极短。' },
+  { id:'explode', name:'爆炸 / 炸弹鬼', en:'explode',
+    desc:'炸弹鬼自爆、BOSS 火雨。90→26Hz 正弦 + 噪声，低频“轰”。' }
+];
+
+const grid = document.getElementById('grid');
+for(const s of SOUNDS){
+  const b = document.createElement('button');
+  b.className = 'item' + (s.hot ? ' hot' : '');
+  b.innerHTML = `<div class="k">${s.en}</div><div class="n">${s.name}</div><div class="d">${s.desc}</div>` +
+    (s.hot ? '<div class="tag">重点嫌疑</div>' : '');
+  b.addEventListener('click', ()=>{
+    AudioSys.init();
+    AudioSys.sfx(s.id);
+    document.querySelectorAll('.item.playing').forEach(x=>x.classList.remove('playing'));
+    b.classList.add('playing');
+    setTimeout(()=> b.classList.remove('playing'), 900);
+  });
+  grid.appendChild(b);
+}
+
+const btnMusic = document.getElementById('btnMusic');
+btnMusic.addEventListener('click', ()=>{
+  AudioSys.init();
+  if(!AudioSys.musicOn){
+    AudioSys.startMusic();
+    btnMusic.classList.add('on');
+    btnMusic.textContent = '停止背景音乐';
+  } else {
+    AudioSys.musicOn = false;
+    clearTimeout(AudioSys.timer);
+    btnMusic.classList.remove('on');
+    btnMusic.textContent = '循环背景音乐（对照，非嫌疑）';
+  }
+});
+const btnMute = document.getElementById('btnMute');
+btnMute.addEventListener('click', ()=>{
+  AudioSys.init();
+  AudioSys.setMuted(!AudioSys.muted);
+  btnMute.classList.toggle('on', AudioSys.muted);
+  btnMute.textContent = AudioSys.muted ? '已静音' : '静音';
+});
+})();
+</script>
+</body>
+</html>
