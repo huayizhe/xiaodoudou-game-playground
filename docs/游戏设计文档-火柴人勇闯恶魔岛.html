@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f5f7f6">
-<title>火柴人勇闯恶魔岛 · 游戏设计文档</title>
+<title>火柴人勇闯恶魔岛 · 百关重构设计</title>
 <script>
 (function(){
   var KEY='doc-theme', root=document.documentElement;
@@ -64,7 +64,6 @@ html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);
   font:15px/1.75 "PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif}
 b{color:var(--teal-deep)}
-/* 侧栏 */
 #sidebar{position:fixed;top:0;left:0;width:276px;height:100vh;overflow-y:auto;
   background:var(--teal);color:var(--on-teal);padding:18px 12px 44px;z-index:1040}
 #sidebar::-webkit-scrollbar{width:5px}
@@ -78,7 +77,6 @@ b{color:var(--teal-deep)}
   transition:background-color .2s ease,border-color .2s ease}
 .theme-btn:hover{background:rgba(255,255,255,.22)}
 .theme-btn:focus-visible{outline:2px solid var(--teal2);outline-offset:2px}
-.theme-float{display:none}
 .theme-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;
   stroke-linecap:round;stroke-linejoin:round;display:block}
 .theme-btn .i,.theme-btn .t{display:none}
@@ -88,20 +86,19 @@ b{color:var(--teal-deep)}
 .nav-group{font-size:11px;letter-spacing:1.2px;opacity:.72;margin:16px 8px 6px}
 .nav-link{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
   color:rgba(255,255,255,.86);text-decoration:none;font-size:13.5px;position:relative}
-.nav-link:hover{background:rgba(255,255,255,.1);color:#fff}
-.nav-link.active{background:rgba(255,255,255,.16);color:#fff;font-weight:700}
+.nav-link:hover{background:rgba(255,255,255,.1);color:var(--on-teal)}
+.nav-link.active{background:rgba(255,255,255,.16);color:var(--on-teal);font-weight:700}
 .nav-link.active::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;
   background:var(--teal2);border-radius:2px}
-.nav-link .num{font-size:11px;opacity:.65;font-variant-numeric:tabular-nums;min-width:17px}
+.nav-link .num{font-size:11px;opacity:.65;font-variant-numeric:tabular-nums;min-width:20px}
 .nav-link:focus-visible{outline:2px solid var(--teal2);outline-offset:-2px}
-/* 主体 */
 main{margin-left:276px;padding:0 18px 64px}
 .wrap{max-width:1280px;margin:0 auto}
 .hero{background:var(--teal);color:var(--on-teal);padding:34px 38px 30px;margin:0 0 22px}
 .hero .tag{display:inline-block;font-size:11.5px;letter-spacing:2px;padding:3px 10px;
   border-radius:999px;background:rgba(255,255,255,.16);color:var(--on-teal)}
 .hero h1{margin:14px 0 8px;font-size:30px;font-weight:800;letter-spacing:.5px;line-height:1.3}
-.hero .lead{margin:0 0 20px;font-size:14.5px;opacity:.92;max-width:900px;color:var(--on-teal)}
+.hero .lead{margin:0 0 20px;font-size:14.5px;opacity:.92;max-width:940px;color:var(--on-teal)}
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .hero .kpi{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
   border-radius:10px;padding:12px 14px}
@@ -112,7 +109,7 @@ section{background:var(--card);border-radius:14px;padding:22px 26px 24px;margin-
 h2{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:800;
   color:var(--teal-ink);margin:0 0 14px;line-height:1.4}
 h2 .n{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
-  width:28px;height:28px;border-radius:6px;background:var(--teal);color:var(--on-teal);
+  min-width:30px;height:28px;padding:0 5px;border-radius:6px;background:var(--teal);color:var(--on-teal);
   font-size:13px;font-weight:700}
 h3{font-size:16.5px;font-weight:700;color:var(--ink);margin:20px 0 8px}
 h4{font-size:14.5px;font-weight:700;color:var(--ink);margin:14px 0 6px}
@@ -152,7 +149,6 @@ th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
 .kpi .v{font-size:22px;font-weight:800;color:var(--teal-ink);line-height:1.3}
 .kpi .l{font-size:12px;color:var(--ink2)}
 footer{max-width:1280px;margin:0 auto;padding:6px 4px 0;font-size:12.5px;color:var(--ink2)}
-/* 移动端 */
 #mbtn{display:none;position:fixed;right:16px;bottom:16px;z-index:1041;
   align-items:center;gap:6px;padding:10px 16px;border-radius:999px;border:1px solid var(--line);
   background:var(--card);color:var(--ink);font-size:14px;box-shadow:0 6px 18px var(--shadow-lg);cursor:pointer}
@@ -165,8 +161,6 @@ body,section,#sidebar,.box,.day,.pill,.kpi,th,td,.theme-btn,.stage{
   #sidebar.show{transform:none}
   main{margin-left:0}
   #mbtn{display:inline-flex}
-  .brand .theme-btn{display:none}
-  .theme-float{display:inline-flex}
   .theme-btn{position:fixed;top:auto;right:16px;bottom:76px;z-index:1041;margin:0;
     background:var(--card);color:var(--ink);border-color:var(--line);
     box-shadow:0 4px 16px var(--shadow-lg)}
@@ -175,7 +169,7 @@ body,section,#sidebar,.box,.day,.pill,.kpi,th,td,.theme-btn,.stage{
   .hero{padding:26px 20px 24px}
   section{padding:18px 16px 20px}
   table{font-size:12.5px}
-  .tw table.wide{min-width:720px}
+  .tw table.wide{min-width:760px}
   th,td{padding:6px 8px}
 }
 @media (prefers-reduced-motion: reduce){
@@ -193,11 +187,10 @@ body,section,#sidebar,.box,.day,.pill,.kpi,th,td,.theme-btn,.stage{
 <body>
 <div id="backdrop"></div>
 <button id="mbtn" type="button" aria-controls="sidebar" aria-expanded="false">目录</button>
-
 <nav id="sidebar" aria-label="文档目录">
   <div class="brand">
-    <div class="brand-title">火柴人勇闯恶魔岛 · 设计文档</div>
-    <div class="brand-sub">v1.0 · 五关俯视角生存 · 2026-11</div>
+    <div class="brand-title">火柴人勇闯恶魔岛 · 百关重构</div>
+    <div class="brand-sub">v2.0 设计评审稿 · 2026-11-24</div>
     <button class="theme-btn" type="button" data-role="theme"
             aria-label="切换外观（跟随系统 / 浅色 / 深色）"
             title="切换外观：跟随系统 → 浅色 → 深色">
@@ -207,460 +200,487 @@ body,section,#sidebar,.box,.day,.pill,.kpi,th,td,.theme-btn,.stage{
       <span class="t t-auto">跟随系统</span><span class="t t-light">浅色</span><span class="t t-dark">深色</span>
     </button>
   </div>
-
-  <div class="nav-group">一 · 看懂游戏</div>
-  <a class="nav-link" href="#s1"><span class="num">01</span>游戏概览</a>
-  <a class="nav-link" href="#s2"><span class="num">02</span>设计目标与体验支柱</a>
-  <a class="nav-link" href="#s3"><span class="num">03</span>核心循环</a>
-
-  <div class="nav-group">二 · 规则与操作</div>
-  <a class="nav-link" href="#s4"><span class="num">04</span>操作与输入</a>
-  <a class="nav-link" href="#s5"><span class="num">05</span>角色状态与生存规则</a>
-  <a class="nav-link" href="#s6"><span class="num">06</span>四大技能</a>
-
-  <div class="nav-group">三 · 敌人与关卡</div>
-  <a class="nav-link" href="#s7"><span class="num">07</span>敌人图鉴</a>
-  <a class="nav-link" href="#s8"><span class="num">08</span>关卡与波次</a>
-  <a class="nav-link" href="#s9"><span class="num">09</span>难度曲线与评级</a>
-
-  <div class="nav-group">四 · 表现与工程</div>
-  <a class="nav-link" href="#s10"><span class="num">10</span>表现层：飘带与音效</a>
-  <a class="nav-link" href="#s11"><span class="num">11</span>UI 流程与存档</a>
-  <a class="nav-link" href="#s12"><span class="num">12</span>渲染与性能</a>
-
-  <div class="nav-group">五 · 收尾</div>
-  <a class="nav-link" href="#s13"><span class="num">13</span>已知问题与迭代建议</a>
-  <a class="nav-link" href="#a1"><span class="num">A1</span>附录：源码地图</a>
-  <a class="nav-link" href="#a2"><span class="num">A2</span>附录：数值速查</a>
+  <div class="nav-group">一 · 决策与现状</div>
+  <a class="nav-link" href="#s1"><span class="num">01</span>文档定位与结论</a>
+  <a class="nav-link" href="#s2"><span class="num">02</span>当前版本核对</a>
+  <a class="nav-link" href="#s3"><span class="num">03</span>体验支柱与边界</a>
+  <div class="nav-group">二 · 连续闯关</div>
+  <a class="nav-link" href="#s4"><span class="num">04</span>核心循环与自动推进</a>
+  <a class="nav-link" href="#s5"><span class="num">05</span>战斗规则继承与调整</a>
+  <a class="nav-link" href="#s6"><span class="num">06</span>局内强化系统</a>
+  <a class="nav-link" href="#s7"><span class="num">07</span>敌人与精英递进</a>
+  <div class="nav-group">三 · 百关内容</div>
+  <a class="nav-link" href="#s8"><span class="num">08</span>十章百关总览</a>
+  <a class="nav-link" href="#s9"><span class="num">09</span>第一章逐关设计</a>
+  <a class="nav-link" href="#s10"><span class="num">10</span>波次与关卡模板</a>
+  <a class="nav-link" href="#s11"><span class="num">11</span>大小 BOSS 体系</a>
+  <a class="nav-link" href="#s12"><span class="num">12</span>难度曲线与评级</a>
+  <div class="nav-group">四 · 双端体验</div>
+  <a class="nav-link" href="#s13"><span class="num">13</span>PC 与移动端操作</a>
+  <a class="nav-link" href="#s14"><span class="num">14</span>界面流程与信息层级</a>
+  <a class="nav-link" href="#s15"><span class="num">15</span>存档、续玩与选关</a>
+  <a class="nav-link" href="#s16"><span class="num">16</span>表现、性能与无障碍</a>
+  <div class="nav-group">五 · 验证与落地</div>
+  <a class="nav-link" href="#s17"><span class="num">17</span>双端验收标准</a>
+  <a class="nav-link" href="#s18"><span class="num">18</span>开发分期与确认项</a>
+  <a class="nav-link" href="#a1"><span class="num">A1</span>附录：现有数值基线</a>
+  <a class="nav-link" href="#a2"><span class="num">A2</span>附录：重构差异清单</a>
 </nav>
-
-<button class="theme-btn theme-float" type="button" data-role="theme"
-            aria-label="切换外观（跟随系统 / 浅色 / 深色）"
-            title="切换外观：跟随系统 → 浅色 → 深色">
-      <span class="i i-auto"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg></span>
-      <span class="i i-light"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg></span>
-      <span class="i i-dark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.8 8.8 0 1 0 10.7 10.7z"/></svg></span>
-      <span class="t t-auto">跟随系统</span><span class="t t-light">浅色</span><span class="t t-dark">深色</span>
-    </button>
-
 <main>
 <div class="wrap">
-
   <header class="hero" id="top">
-    <span class="tag">游戏设计文档 · 俯视角生存动作</span>
-    <h1>火柴人勇闯恶魔岛</h1>
-    <p class="lead">五座岛屿、一条红绫、四式剑招。本文记录当前实现的操作口径、技能数值、敌人行为、波次结构与性能取舍，作为后续加关、调平衡、改表现时的对照基准。</p>
+    <span class="tag">目标设计 · 尚未进入开发</span>
+    <h1>火柴人勇闯恶魔岛 · 100 关连续闯关</h1>
+    <p class="lead">保留现有自动锁敌、红绫、四技能与双端操控，重构为十章百关。战斗自动推进，强化选择无限暂停；PC 与移动端使用同一战斗规则、同一难度和同等完整的功能。</p>
     <div class="kpis">
-      <div class="kpi"><b>5 关</b><span>血色海滩 → 恶魔王座</span></div>
-      <div class="kpi"><b>6 种敌人 + 3 精英</b><span>外加三阶段魔王巴尔</span></div>
-      <div class="kpi"><b>4 技能 + 闪避</b><span>Z / X / C 冷却，V 靠怒气</span></div>
+      <div class="kpi"><b>10 章 × 10 关</b><span>每 5 关小 BOSS，每 10 关大 BOSS</span></div>
+      <div class="kpi"><b>90–120 分钟</b><span>完整首轮目标时长，可按关中断续玩</span></div>
+      <div class="kpi"><b>双端同规则</b><span>键盘与触控均覆盖战斗、强化、暂停和选关</span></div>
     </div>
   </header>
 
   <section id="s1">
-    <h2><span class="n">01</span>游戏概览</h2>
-    <p>《火柴人勇闯恶魔岛》是「小豆豆的游戏广场」里的俯视角动作项目：主角在封闭竞技场里被一波波魔物围住，靠自动锁敌的普攻与四个技能清场，打完五座岛屿。整个游戏写在一个 HTML 文件里，角色、地面、特效全部用 Canvas 2D 程序化绘制，音效与背景音乐由 WebAudio 实时合成，没有任何外部素材，双击即开。</p>
-    <div class="tw"><table>
-      <tbody>
-        <tr><th style="width:130px">文件</th><td><code>stickman.html</code>，约 3900 行，单文件自包含（桌面键鼠与手机触控共用一份代码）</td></tr>
-        <tr><th>技术形态</th><td>原生 JS + Canvas 2D；逻辑分辨率 1280×720，DPR 上限 2，竞技场四周留 46 px 边</td></tr>
-        <tr><th>玩法类型</th><td>俯视角竞技场生存（清波 → 强化 → 精英 / 魔王），单关 1.5–5 分钟</td></tr>
-        <tr><th>操作设备</th><td>双端：桌面键盘（WASD / 方向键移动，空格闪避，Z / X / C / V 技能）；手机横屏触控（左下摇杆、右下 1 大 3 小技能、独立闪避键）</td></tr>
-        <tr><th>目标用户</th><td>12 岁以上、玩过割草或动作游戏的人；难度以「首局可能翻车、摸清节奏后能拿 S」为基准</td></tr>
-        <tr><th>关底结构</th><td>第 2/3/4 关末尾各有一只精英，第 5 关为三阶段魔王</td></tr>
-        <tr><th>进度保存</th><td>localStorage 单键 <code>stickman_demon_isle_v1</code>：解锁进度、每关星级、每关最佳时间</td></tr>
-      </tbody>
-    </table></div>
-    <div class="box key"><b>一句话定位：</b>把「走位、聚怪、四招循环、怒气开大」压进一个不用鼠标的键盘动作游戏，用一条会飘的红绫把操作反馈成画面。</div>
+    <h2><span class="n">01</span>文档定位与结论</h2>
+    <p>本文是下一版游戏的<strong>目标设计评审稿</strong>，不是对当前线上功能的宣称。当前 <code>stickman.html</code> 仍是 5 关版本；本文经确认后才进入开发，开发后的实际数值还需通过试玩校准。</p>
+    <div class="box key"><b>本轮定案：</b>100 关连续闯关；清关后先结算，再进入三选一强化；强化界面不倒计时，玩家不选就一直安全暂停；选完后经过 2 秒过渡自动进入下一关。关卡选择保留，但独立于主闯关存档。</div>
+    <h3>设计要解决的四个问题</h3>
+    <ol>
+      <li><b>推进断档：</b>取消每关手动点击「下一关」，但不取消玩家主动休息的权利。</li>
+      <li><b>百关疲劳：</b>用章节、敌人组合、场地机制和 BOSS 变化递进，而不是只增加血量。</li>
+      <li><b>长线无力：</b>血量、怒气、技能冷却和强化在闯关模式内连续继承，失败只重打当前关。</li>
+      <li><b>双端失衡：</b>PC 与移动端共享战斗数值和关卡内容，仅调整输入与视觉性能，不暗改任何一端难度。</li>
+    </ol>
   </section>
 
   <section id="s2">
-    <h2><span class="n">02</span>设计目标与体验支柱</h2>
-    <p>这个项目的取舍很明确：不追求内容量，追求「手不离开方向键也能打出好看的连招」。四条支柱决定了几乎全部参数。</p>
-    <h3>支柱一：红绫就是主角</h3>
-    <p>角色头顶绑着一条 20 节点、段长 8.5 px 的 Verlet 链，每帧跑 3 次子步、5 次约束迭代。它受三档风（2.1 / 5.3 / 11.3 Hz 叠加）和逐节点湍流驱动，同时按角色速度做反向拖拽——跑起来向后飞展，停下变 S 形垂落，起跳和滑斩时被拉成直线。转身不是瞬间镜像，而是横向压扁再展开，所以飘带会在转身的 0.15 秒里甩出一个弧。</p>
-    <h3>支柱二：手不离方向键</h3>
-    <p>第一版用鼠标瞄准、J/K 普攻，实测「一手方向键一手鼠标再按技能」根本打不出来。现在改成自动锁敌：每帧锁定 330 px 内最近的敌人，进入 124 px 判定椭圆就自动挥砍。判定椭圆纵向放大 22%，所以站在敌人的正上 / 正下方也能砍中，不必先走到同一水平线——这是整套操作手感的地基。</p>
-    <h3>支柱三：四个技能，四种句式</h3>
-    <p>四个技能不是四种伤害数字，而是四种解决问题的方式：Z 解决「被围住」并给机动，X 解决「要位移又要续命」，C 解决「怪太散抓不到」，V 解决「该收割了」。任何一个技能被改弱，都应该先问它原本解决的是哪个问题。</p>
-    <h3>支柱四：流畅优先于炫技</h3>
-    <p>「卡顿感」是这个项目被反馈最多的问题，成因不是帧率而是震屏与硬切。现在震屏改成正弦平滑衰减，击杀不再震屏；普攻完全不做顿帧，技能命中最多 0.02–0.03 秒；剑的角度按不同速率追随，待机与出招之间不再硬切；HUD 降到 30 Hz 刷新；开局 240 帧实测帧耗时，超过 20.5 ms 就把内部渲染倍率降到 1.25。</p>
-    <div class="box warn"><b>边界：</b>不做联机、不做装备与等级成长、不做随机地图、不做手柄。移动端按横屏设计：竖屏打开时界面照常加载并挂非阻挡的横屏提示，但不为竖屏单独重排战斗画面。五关是固定数据，保证同一关每次进来敌人构成完全一致，方便比时间和刷星。</div>
+    <h2><span class="n">02</span>当前版本核对</h2>
+    <p>以下基线按当前 <code>stickman.html</code> 实际代码核对。旧文档中容易随代码失效的固定行号源码地图不再保留，改为记录可验证的机制与数值。</p>
+    <div class="tw"><table>
+      <thead><tr><th>项目</th><th>当前真实版本</th><th>百关版处理</th></tr></thead>
+      <tbody>
+        <tr><td>关卡</td><td>5 关；3–4 波；第 2/3/4 关有精英，第 5 关为巴尔</td><td>扩展为 10 章 100 关；现有 5 个主题纳入新章节体系</td></tr>
+        <tr><td>战斗</td><td>自动锁定最近敌人、三段自动普攻、Z/X/C/V 四技能、空格闪避</td><td>核心手感保留，新增强化不得破坏四技能各自职责</td></tr>
+        <tr><td>过关</td><td>完整结算页，手动点击下一关</td><td>轻结算 → 无限暂停的强化三选一 → 2 秒后自动推进</td></tr>
+        <tr><td>角色状态</td><td>每次 <code>startLevel</code> 都恢复满血、清怒气、清冷却和全部统计</td><td>闯关模式继承状态；单关练习使用章节标准模板</td></tr>
+        <tr><td>成长</td><td>没有局内技能强化、装备或等级</td><td>只增加局内强化，不引入金币、商店和装备栏</td></tr>
+        <tr><td>评价</td><td>星级只看血量，字母评级同时看血量和时间，两套口径可能冲突</td><td>统一先计算字母评级，再映射星级</td></tr>
+        <tr><td>续玩</td><td>只保存解锁、星级和最佳时间；开始进入最高解锁关</td><td>每关入口保存闯关快照；标题页明确区分继续闯关与单关练习</td></tr>
+        <tr><td>性能</td><td>开局约 240 帧只做一次自适应降档</td><td>改为持续滑动窗口与迟滞降档，视觉降档不改变战斗逻辑</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box warn"><b>文档修正：</b>技能命中的常规顿帧并非统一为 0.02–0.03 秒；当前普通技能命中只有暴击会触发约 0.02 秒，炸弹鬼自爆另可触发 0.03 秒。角色存活时红绫水平锚点偏移为 13 px，死亡姿态才使用 92 px。新版设计不沿用旧文档的笼统描述。</div>
   </section>
 
   <section id="s3">
-    <h2><span class="n">03</span>核心循环</h2>
-    <p>一关的节奏固定为三段：拉怪 → 清波 → 收割。三段的时间比大约 4 : 4 : 1，中间用「波次清除回 3% 血」把节奏切开。</p>
-    <div class="grid">
-      <div class="stage s1">
-        <span class="badge">第一段 · 拉怪</span>
-        <p>进场先看清这波的敌人池（卡面只显示第一波的三个颜色点）。用 Z 的 50% 加速绕圈把散兵拖成一团，或直接 C 抓起最近的 5 只砸向威胁最高的目标，把战场压缩到一个小圆里。</p>
-      </div>
-      <div class="stage s2">
-        <span class="badge">第二段 · 清波</span>
-        <p>团起来之后按 Z（半径 148、42 伤）→ 普攻三段补刀 → X 跳到下一团（178 半径、78 伤、回 20% 血）。清完一波自动回 3% 血、间隔 1.9 秒进下一波。</p>
-      </div>
-      <div class="stage s3">
-        <span class="badge">第三段 · 收割</span>
-        <p>怒气满 100 后按 V 进入 2.8 秒无影斩：穿过敌人、每段 64 / 40 伤、普通怪最多挨 2 刀、Boss 最多 8 刀，收尾 230 半径冲击波。这段全程无敌，也不震屏。</p>
-      </div>
+    <h2><span class="n">03</span>体验支柱与边界</h2>
+    <div class="days">
+      <div class="day"><b>不停冲锋，也能随时停下</b><span>自动推进消灭重复点击；强化界面与暂停菜单提供绝对安全的休息点。</span></div>
+      <div class="day"><b>四招各有用途</b><span>Z 解围、X 位移续航、C 聚怪控制、V 收割；强化加深用途而不是制造一个万能键。</span></div>
+      <div class="day"><b>难度来自可读的组合</b><span>所有重击有预警，危险不只靠颜色表达；不靠无限提速和血量膨胀制造伪难度。</span></div>
+      <div class="day"><b>双端同等完整</b><span>同一关卡、敌人、强化、评分与存档能力；移动端不是简化版，PC 也不是触控版的附属。</span></div>
     </div>
-    <h3>一次失败会发生什么</h3>
-    <ol>
-      <li>受伤：扣血、击退 260、0.72 秒无敌，同时按伤害的 0.6 倍涨怒气（挨打也在攒大招）。</li>
-      <li>死亡：血量归零后播 1.4 秒慢放倒地，然后进失败结算，评级固定 D。</li>
-      <li>重开：整关从第一波重来，没有检查点；解锁与星级不受影响。</li>
-      <li>续航：每击杀 2 只回 1% 血（0.5% 累计），加上 13% 掉落的回血包（+4%）与 21% 掉落的怒气包（+18 怒）。</li>
-    </ol>
-    <p>没有检查点是当前最硬的一条约束：第 5 关要打 4 波加魔王，全程约 4 分钟，中途死亡就只能整关重来。这一点在「已知问题」里单列。</p>
+    <h3>本轮明确不做</h3>
+    <p><span class="pill">联机</span><span class="pill">付费数值</span><span class="pill">金币商店</span><span class="pill">装备背包</span><span class="pill">随机关卡地图</span><span class="pill">强制每日签到</span><span class="pill">隐藏动态难度</span></p>
+    <p>无尽模式与高难周目可以作为 100 关完成后的扩展，但不阻塞首轮百关开发。移动端以横屏为完整战斗形态；竖屏不阻断菜单和存档操作，并明确引导旋转。</p>
   </section>
 
   <section id="s4">
-    <h2><span class="n">04</span>操作与输入</h2>
-    <p>桌面端操作集中在左手键盘区，没有鼠标、没有 J/K。窗口失焦或切到别的标签页会自动暂停，回来后按 Esc 继续。手机端把同一套动作映射成「左下摇杆 + 右下技能簇」，输入层只保留一根移动轴和四个触发点，战斗逻辑与键鼠完全共用。</p>
-    <div class="tw"><table>
-      <thead><tr><th style="width:150px">输入</th><th style="width:120px">动作</th><th>口径</th></tr></thead>
-      <tbody>
-        <tr><td>WASD / 方向键</td><td>八向移动</td><td>基础速度 255 px/s；加速 2600（移动中）/ 3200（松手修正），松手按 <code>pow(0.02,dt)</code> 衰减，所以是「有惯性但刹得住」</td></tr>
-        <tr><td>左下摇杆（触屏）</td><td>八向移动</td><td>底盘直径取屏幕短边 0.30（96–150 px 封顶），死区 10% 盘径、推杆半径 30%；过死区即满速，方向连续，手感与键盘同一根轴</td></tr>
-        <tr><td>空格 / 闪（触屏）</td><td>闪避</td><td>0.17 秒、980 px/s，冷却 1.05 秒，无敌 0.28 秒；没有方向输入时自动朝「远离锁定目标」的方向后撤</td></tr>
-        <tr><td>Z</td><td>旋风斩</td><td>冷却 5 秒，落地后移速 +50% 持续 2 秒</td></tr>
-        <tr><td>X</td><td>裂地跃斩</td><td>冷却 8 秒，自动朝锁定目标起跳，落地回血 20%</td></tr>
-        <tr><td>C</td><td>裂空投</td><td>冷却 9 秒（没抓到东西只进 3.6 秒），抓 5 只砸向威胁最高的怪</td></tr>
-        <tr><td>V / 斩（触屏）</td><td>无影斩</td><td>无冷却，怒气必须满 100，释放即清空怒气</td></tr>
-        <tr><td>右侧技能簇（触屏）</td><td>1 大 3 小</td><td>无影斩贴右下角（离边约短边 5.5%），直径取屏幕短边 0.19（52–92 px 封顶）；Z / X / C 以无影斩圆心为圆心、按圆心距（小技能直径 + 间隙）反推半径，沿一段 72° 的真圆弧每 36° 转一格展开，Z 与大招同高起步、逐级向左上转（Z 最低、X 中间、C 最高）；闪避键独立一颗，落在 Z 左侧同一水平线，不与任何技能叠压；按下即放并带 90% 缩放的按压反馈；冷却做扇形遮罩 + 剩余秒数，无影斩用怒气环占位，图标固定为「斩」</td></tr>
-        <tr><td>M</td><td>静音</td><td>主音量 0.55，静音后图标半透明</td></tr>
-        <tr><td>Esc / P</td><td>暂停 / 继续</td><td>标题页按 Esc 回标题；结算页按 Enter 进下一关</td></tr>
-      </tbody>
-    </table></div>
-    <p>触屏模式由 <code>(pointer:coarse)</code> 加小屏视口自动判定，<code>?touch=1</code> / <code>?touch=0</code> 可强制开关便于调试。进入关卡时尝试全屏并锁横屏；系统不允许时不再用全屏遮罩挡住游戏，竖屏下界面照常加载，只在画面下方挂一条「建议横屏 · 体验更佳」的轻提示，转到横屏后自动按新尺寸重排。手机端内部渲染倍率上限压到 1.5，画布按 16:9 居中、两侧留黑，HUD 与控件贴屏幕四角并避开刘海安全区；横屏矮屏（≤560 px 高）下血条、BOSS 条、教学提示与结算面板全部收紧，结算一屏装下、不出现滚动条。</p>
-    <h3>自动锁敌与自动普攻</h3>
-    <div class="tw"><table>
-      <thead><tr><th style="width:140px">参数</th><th>值</th><th>作用</th></tr></thead>
-      <tbody>
-        <tr><td>锁定半径</td><td class="num">330 px</td><td>每帧取最近的存活敌人，跳过入场无敌（0.55 s）与已死亡单位</td></tr>
-        <tr><td>出手判定</td><td class="num">124 + r</td><td>椭圆横向 124、纵向 ×1.22；站上下方也能出手，这是「好操作」的关键</td></tr>
-        <tr><td>攻击间隔</td><td class="num">0.30 s</td><td>三段循环，第三段收招即重置，节奏约 3.3 次/秒</td></tr>
-        <tr><td>射程 / 弧度</td><td class="num">118 / 132</td><td>前两段 118、第三段 132；扇形 ±1.5 rad（约 86°）</td></tr>
-        <tr><td>伤害</td><td class="num">13 / 13 / 22</td><td>每段 12% 概率暴击 ×1.6；命中回怒 4，且整段有命中额外 +3</td></tr>
-        <tr><td>突进</td><td class="num">70 / 150</td><td>出手同时朝目标前冲，目标偏远超 0.72×射程时按差距追加 <code>×3.5</code> 的贴身位移</td></tr>
-        <tr><td>朝向</td><td class="num">7 px 滞回</td><td>目标横向越过 7 px 才转身，避免站在敌人正上下方时来回抽动</td></tr>
-      </tbody>
-    </table></div>
-    <div class="box key"><b>为什么纵向放宽：</b>俯视角里「正上方」是玩家最常处的相对位置——绕着怪跑圈时人总在它的上下方。纵向判定放大 22% 后，绕圈过程本身就是持续输出，不用刻意对齐水平线。</div>
+    <h2><span class="n">04</span>核心循环与自动推进</h2>
+    <div class="grid">
+      <div class="stage s1"><span class="badge">秒级循环</span><p>走位聚怪 → 自动普攻 → 四技能解围 / 控制 / 收割 → 管理血量与怒气。</p></div>
+      <div class="stage s2"><span class="badge">关卡循环</span><p>清波 → BOSS 或关底 → 轻结算 → 三选一强化 → 自动进入下一关。</p></div>
+      <div class="stage s3"><span class="badge">章节循环</span><p>学习新机制 → 组合考验 → 小 BOSS → 机制变体 → 大 BOSS → 新章节。</p></div>
+      <div class="stage s1"><span class="badge">长期循环</span><p>推进解锁 → 刷新单关评级 → 完成 100 关 → 再考虑无尽或高难周目。</p></div>
+    </div>
+    <h3>一关结束后的准确状态顺序</h3>
+    <ol>
+      <li><b>胜利收尾：</b>立即停止敌方伤害与新出怪，清理残余弹体；不再出现“BOSS 已死仍被小怪打死”。</li>
+      <li><b>轻结算：</b>展示关卡、评级、用时和剩余血量，停留约 1.2 秒；不覆盖整屏长报告。</li>
+      <li><b>关卡恢复：</b>普通关 +6% 最大生命，小 BOSS +20%，大 BOSS +35%；显示血条绿光与实际数值。</li>
+      <li><b>强化暂停：</b>弹出三选一，战斗计时、敌方、冷却和强化界面均无倒计时；这是无限休息点。</li>
+      <li><b>自动衔接：</b>选定后关闭面板，显示下一章 / 下一关名称，2 秒后可移动但不受伤害，随后出怪。</li>
+    </ol>
+    <div class="box key"><b>不选就不推进：</b>强化界面没有“超时自动选择”。玩家可以停在这里休息；切后台、失焦或锁屏也保持暂停，回来后仍停留在同一选择。</div>
+    <h3>失败与主动退出</h3>
+    <p>死亡后提供「重试本关」「保存并返回标题」。重试读取本关入口快照，不丢失已有关卡与强化。战斗中退出只保证从本关入口继续，不承诺恢复到某一帧或某一波，界面需明确写出这一点。</p>
   </section>
 
   <section id="s5">
-    <h2><span class="n">05</span>角色状态与生存规则</h2>
+    <h2><span class="n">05</span>战斗规则继承与调整</h2>
+    <h3>闯关模式跨关继承</h3>
     <div class="tw"><table>
-      <thead><tr><th style="width:150px">项</th><th style="width:120px">值</th><th>说明</th></tr></thead>
+      <thead><tr><th>状态</th><th>跨关规则</th><th>设计理由</th></tr></thead>
       <tbody>
-        <tr><td>生命</td><td class="num">100</td><td>无护甲、无护盾，所有伤害直接扣血</td></tr>
-        <tr><td>受伤无敌</td><td class="num">0.72 s</td><td>受击后进入，期间所有伤害无效，同时给 0.3 秒红闪</td></tr>
-        <tr><td>击退</td><td class="num">260</td><td>沿「伤害来源 → 角色」方向施加，贴脸被围时会被推出去</td></tr>
-        <tr><td>挨打回怒</td><td class="num">0.6 × 伤害</td><td>被撞一次约涨 15–18 怒，属于「越惨越能开大」的补偿</td></tr>
-        <tr><td>击杀回血</td><td class="num">0.5% / 杀</td><td>累计两次击杀回 1%（每次 +1 点），不弹数字，只在头顶飘 +1%</td></tr>
-        <tr><td>清波回血</td><td class="num">+3%</td><td>一波清空后自动回，<b>不飘数字、只有音效</b>，玩家感知很弱</td></tr>
-        <tr><td>回血包</td><td class="num">+4%</td><td>13% 掉落；存活 14 秒；130 px 内自动吸附，26 px 内被拾取</td></tr>
-        <tr><td>怒气包</td><td class="num">+18</td><td>21% 掉落；其余同上</td></tr>
-        <tr><td>死亡</td><td class="num">1.4 s</td><td>慢放 0.25×、播倒地姿态、飘带落地，然后进失败结算</td></tr>
+        <tr><td>生命 / 最大生命</td><td>继承，再结算关卡恢复；不超过最大生命</td><td>保留长线生存压力，也给稳定恢复窗口</td></tr>
+        <tr><td>怒气</td><td>继承，上限仍为基础 100，除非强化改变</td><td>允许为大 BOSS 留大，形成资源决策</td></tr>
+        <tr><td>Z/X/C 冷却</td><td>继承剩余冷却；强化界面暂停冷却，过渡 2 秒正常恢复</td><td>避免过关瞬间强行刷新全部技能</td></tr>
+        <tr><td>强化与叠层</td><td>继承并写入本关入口快照</td><td>形成一局一套构筑</td></tr>
+        <tr><td>连击</td><td>过关时清零，不跨关保留</td><td>避免自动衔接逼迫玩家赶路续连击</td></tr>
+        <tr><td>临时无敌 / 技能动作</td><td>胜利时安全结束；新关只给 2 秒出场保护</td><td>防止把大招或无敌状态异常带入下一关</td></tr>
+        <tr><td>总进度统计</td><td>累计击杀、总用时、各关评级单独记录</td><td>兼顾整局回顾与单关最佳成绩</td></tr>
       </tbody>
     </table></div>
-    <h3>怒气与连击</h3>
-    <p>怒气上限 100，来源有四类：普攻命中 +4（整段命中再 +3）、技能命中 +5、击杀 +14、挨打 +0.6× 伤害、拾取 +18。满 100 时弹一次「按 V」提示（只提示一次），按 V 立刻清零。</p>
-    <p>连击计数由任意一次有效命中驱动，2.2 秒内没有新命中就归零；20 / 50 / 100 / 200 连击各弹一次横幅。连击只影响观感与结算展示，不参与评分。</p>
-    <div class="box warn"><b>平衡注意：</b>大招期间的击杀只回一半怒气（7），命中完全不回怒。这是为了防止「开大清场 → 怒气回满 → 再开大」的无脑循环；实测一次大招期间仍能攒到 56 怒，所以节奏仍偏快。</div>
+    <h3>保留的基础战斗数值</h3>
+    <p>第一关仍以当前角色与技能为基准：100 生命、255 移速、0.30 秒普攻间隔、Z 5 秒、X 8 秒、C 9 秒、V 需 100 怒气。后续强化在此基础上叠加，具体叠层上限见下一节。</p>
+    <h3>百关版必须同步修正的旧问题</h3>
+    <ul>
+      <li>盾卫受到技能命中或强击退后增加 1.5 秒破防窗口，避免自动锁敌与绕后互相打架。</li>
+      <li>巫妖每场最多召唤 8 只小鬼；召唤时有 0.6 秒可识别硬直，不能无限拖长关卡。</li>
+      <li>清波 +3% 回血增加可见反馈；大招期间击杀回怒保留减半原则，新增强化不得绕过该限制。</li>
+      <li>波次结束、BOSS 死亡和关卡胜利统一走安全结算，先停伤害再播放演出。</li>
+    </ul>
   </section>
 
   <section id="s6">
-    <h2><span class="n">06</span>四大技能</h2>
+    <h2><span class="n">06</span>局内强化系统</h2>
+    <p>每关胜利后三选一，100 关完整流程最多获得 99 次强化。强化只服务于本轮闯关，不引入额外货币。第一章优先出现易懂的基础强化，第二章起加入进阶联动，大 BOSS 后必出一项核心强化。</p>
+    <h3>强化池与叠层约束</h3>
     <div class="tw"><table class="wide">
-      <thead><tr><th style="width:118px">技能</th><th style="width:96px">冷却</th><th style="width:150px">形态</th><th style="width:150px">伤害 / 效果</th><th style="width:110px">范围</th><th>设计意图</th></tr></thead>
+      <thead><tr><th>流派</th><th>代表强化</th><th>上限 / 互斥</th><th>改变的决策</th></tr></thead>
       <tbody>
-        <tr><td>Z 旋风斩</td><td class="num">5 s</td><td>原地 0.46 s 旋身，0.12 s 时结算</td><td>42 伤 + 击退 420，之后移速 +50% 2 秒</td><td class="num">R 148</td><td>被围住时的解围键，附带机动，鼓励「冲进去再冲出来」</td></tr>
-        <tr><td>X 裂地跃斩</td><td class="num">8 s</td><td>0.42 s 抛物线跃起 96 px 后砸地</td><td>78 伤（30% 暴击）、击退 560、回血 20%</td><td class="num">R 178</td><td>位移 + 续航，是长线生存的主力；也能当「逃生键」用</td></tr>
-        <tr><td>C 裂空投</td><td class="num">9 s</td><td>抓 5 只举过头顶，0.64 s 后砸出</td><td>被砸 36 + 4×数量；落点 58 伤 + 眩晕 2.2 s</td><td class="num">抓 250 / 砸 175</td><td>解决「怪太散」：把最近的怪变成一发炮弹打向最危险的怪</td></tr>
-        <tr><td>V 无影斩</td><td class="num">怒气 100</td><td>2.8 s 连续滑行，每段穿过目标后出剑</td><td>首刀 64、复刀 40；收尾冲击 72</td><td class="num">滑行 1750 px/s / 收尾 R 230</td><td>收割与清场；全程无敌，是「攒资源—兑现」的高潮</td></tr>
+        <tr><td>普攻 · 连斩</td><td>第三段射程 +12%；三段命中后下一击伤害 +20%；高连击时怒气获取小幅提高</td><td>射程最多 3 层；增伤最多 3 层</td><td>主动维持三段节奏，而不是只按技能</td></tr>
+        <tr><td>Z · 旋风</td><td>范围 +12%；击杀 3 只减 1 秒冷却；加速期间减伤 15%</td><td>范围最多 3 层；减冷却每次施放最多触发一次</td><td>冲进怪群解围后安全撤出</td></tr>
+        <tr><td>X · 跃斩</td><td>落点留 3 秒裂隙；回血 +4% 最大生命；空中落地后重置少量闪避冷却</td><td>额外回血最多 3 层；裂隙伤害不可无限叠加</td><td>选择进攻落点或保命落点</td></tr>
+        <tr><td>C · 裂空投</td><td>抓取数 +1；落点二次爆炸；眩晕结束后目标受伤 +10%</td><td>抓取最多 8 只；易伤最多 3 层</td><td>围绕聚怪和集火高威胁目标构筑</td></tr>
+        <tr><td>V · 无影</td><td>最大斩击目标 +1；收尾范围 +15%；对 BOSS 的最后一击额外破防</td><td>目标最多 +4；大招期间命中仍不回怒</td><td>决定清群怪还是留给 BOSS 爆发</td></tr>
+        <tr><td>闪避 · 生存</td><td>完美闪避回 6 怒；最大生命 +10；每关首次致命伤保留 1 血</td><td>保命每个大章节最多触发一次</td><td>鼓励读预警，提供有限容错而非永久无敌</td></tr>
       </tbody>
     </table></div>
-
-    <h3>Z · 旋风斩</h3>
-    <p>按下后角色原地旋身 0.46 秒，到剩余 0.34 秒（即起手后 0.12 秒）结算一次全周判定：半径 148 内的敌人吃 42 伤并被推开 420。随后 2 秒移速 ×1.5（255 → 382）。视觉上是 10 道放射状刀光加一圈扩张环，落地音用低频撞击。设计上它是「解围 + 机动」，所以伤害不高但一定命中，且推开的方向是「从角色指向敌人」，能把贴脸的怪均匀撒出去。</p>
-
-    <h3>X · 裂地跃斩</h3>
-    <p>起跳目标自动选锁定敌人，距离夹在 130–300 px 之间（太近就跳过头、太远够不到），坐标再夹进竞技场边界。跳跃 0.42 秒，最高抬升 96 px，全程 0.62 秒无敌；落地判定半径 178、78 伤、30% 概率暴击、击退 560，并立刻回 20% 血（恒定 +20 点）。这是整套循环里唯一的主动续航，所以冷却 8 秒定得比其他技能长。空中不可被子弹命中，可以用来穿弹幕。</p>
-
-    <h3>C · 裂空投</h3>
-    <p>重做过的技能。原来只是「甩出飘带拽人」，实战里既拉不动精英也不解决散怪，属于鸡肋。现在的逻辑分两步：</p>
+    <h3>选项生成规则</h3>
     <ol>
-      <li><b>抓取：</b>以角色为圆心 250 px 内取最近的 5 只非 Boss 单位，抓起来悬在头顶成一排。</li>
-      <li><b>投掷：</b>在「没被抓的怪」里选威胁值最高的当靶子，威胁表为 小鬼 1 / 炸弹鬼 2 / 眼球怪 3 / 胖魔 4 / 盾卫 5 / 巫妖 6 / 魔王 9，精英 +0.5；威胁并列时取离玩家最近的那只。</li>
+      <li>三项至少来自两个不同流派，已满层或互斥强化不再出现。</li>
+      <li>第 1–3 关不出现复杂联动；第 5 关后开放进阶强化；每章大 BOSS 后提供核心强化。</li>
+      <li>不根据血量偷偷操纵选项品质；低血时可以提高生存项出现率，但必须在设计口径中公开，不改变稀有度。</li>
+      <li>所有项目满层时，后备选项固定为「最大生命 +5」或「恢复 20% 生命」，不出现空面板。</li>
+      <li>暂不提供刷新、锁定、出售和强化货币，避免 99 次选择变成菜单负担。</li>
     </ol>
-    <p>落点判定半径 175：被砸的 5 只吃 <code>36 + 4×数量</code>（满抓时 56），范围内的其他怪吃 58 并被击退 260；随后落点内所有单位眩晕 2.2 秒（Boss 只 0.8 秒）。抓不到东西时不空转，只进 3.6 秒短冷却。这个技能的价值不在伤害，而在于「把 5 只怪瞬间搬到一只高威胁怪身边，并让它们全部停 2.2 秒」——正好接一发 Z 或 X。</p>
-
-    <h3>V · 无影斩</h3>
-    <p>怒气满 100 释放，持续 2.8 秒，期间无敌时间再加 0.35 秒。每一段的行为是：选下一个目标（优先没砍过的，其次最近的），以约 1750 px/s 的近匀速滑过去，<b>等身体掠过目标的那一刻才结算斩击</b>——判定是「滑行线段上任意一点距敌人小于 62 + r」，所以是穿身而过，不是停在面前砍。滑行距离是「到目标的距离 + 175（Boss 150）」，穿过之后继续往前滑一段，衔接下一段时速度不断档。</p>
-    <p>每只普通怪最多挨 2 刀、Boss 最多 8 刀；首刀 64、复刀 40，全部暴击色。目标耗尽后自动收尾：230 半径、72 伤、击退 560，配双重冲击环与 8 道放射线。滑行时每 22 毫秒留一道残影，剑光轨迹用剑尖世界坐标记录 18 个点。整个技能<b>不震屏、不顿帧</b>，只用两次极短慢放（起手 0.5× 0.12 秒、收尾 0.55× 0.18 秒）——这是为了解决「像老版剑姬大招一样一顿一顿」的反馈。</p>
+    <h3>选择界面双端等价操作</h3>
+    <p>PC 支持鼠标点击、方向键切换、数字键 1/2/3 直选、Enter 确认；移动端直接点按大卡片。选择后立即显示已获得的简短反馈，再进入 2 秒过渡。面板打开时清空摇杆与键盘残留输入，禁止穿透触发技能。</p>
   </section>
 
   <section id="s7">
-    <h2><span class="n">07</span>敌人图鉴</h2>
+    <h2><span class="n">07</span>敌人与精英递进</h2>
+    <p>百关复用当前六类敌人的清晰职责，再增加两种新敌人。新敌人必须先在安全组合中教学，再与旧敌人组合，不同时投放多个陌生机制。</p>
     <div class="tw"><table class="wide">
-      <thead><tr><th style="width:104px">敌人</th><th class="num" style="width:70px">HP</th><th class="num" style="width:70px">伤害</th><th class="num" style="width:78px">速度</th><th class="num" style="width:64px">半径</th><th>行为</th></tr></thead>
+      <thead><tr><th>敌人</th><th>首次出现</th><th>核心职责</th><th>后期变化</th></tr></thead>
       <tbody>
-        <tr><td>小鬼</td><td class="num">34</td><td class="num">9</td><td class="num">152</td><td class="num">16</td><td>追到贴身（r+p.r+8）后 0.32 秒抬手再判定，命中就退开恢复，冷却 1.1 秒。数量压力的基本单位</td></tr>
-        <tr><td>胖魔</td><td class="num">180</td><td class="num">22</td><td class="num">60</td><td class="num">28</td><td>300 px 内且冷却好（3.4 s）就蓄力 0.62 秒，然后以 640 px/s 直冲 0.34 秒；撞到人立刻收招。蓄力期有虚线预警</td></tr>
-        <tr><td>眼球怪</td><td class="num">64</td><td class="num">13</td><td class="num">92</td><td class="num">18</td><td>维持 210–340 px 的「甜区」横向游走；甜区内每 2.0–2.8 秒吐一颗 300 px/s 的弹。第 3 关起改吐三发扇形</td></tr>
-        <tr><td>炸弹鬼</td><td class="num">42</td><td class="num">32</td><td class="num">186</td><td class="num">16</td><td>冲到贴身距离（<code>r + 15 + 34</code>，约 65 px）内点引信，0.85 秒后自爆：半径 118，对玩家 32 伤，<b>对友军 90 伤</b>。可以故意引到怪堆里当炸弹用</td></tr>
-        <tr><td>盾卫</td><td class="num">230</td><td class="num">17</td><td class="num">54</td><td class="num">25</td><td>贴身后每 1.4 秒平砍；<b>正面 ±1.35 rad 内受到的普攻只吃 12%</b>，技能与穿透判定无视格挡</td></tr>
-        <tr><td>巫妖</td><td class="num">150</td><td class="num">11</td><td class="num">78</td><td class="num">20</td><td>远距离游走；每 3.6–4.6 秒给 240 px 内友军回 16% 最大血；每 6–8 秒召 2 只小鬼（场上存活少于 26 只时）</td></tr>
-        <tr><td>炎狱魔王 · 巴尔</td><td class="num">3920</td><td class="num">30</td><td class="num">66</td><td class="num">52</td><td>三阶段，见下。基础血 2800，按关卡序号 ×(1+0.10×关)，第 5 关为 3920</td></tr>
+        <tr><td>小鬼</td><td class="num">1</td><td>基础追击与包围</td><td>数量、入场方向、精英词缀，不持续提升移动速度</td></tr>
+        <tr><td>胖魔</td><td class="num">2</td><td>蓄力冲撞，迫使横向闪避</td><td>与远程火力形成夹击</td></tr>
+        <tr><td>眼球怪</td><td class="num">3</td><td>远程甜区游走与扇形弹</td><td>弹形变化，不缩短到无法反应的预警</td></tr>
+        <tr><td>炸弹鬼</td><td class="num">6</td><td>自爆且伤害友军，可被利用</td><td>配合场地爆炸物与聚怪构筑</td></tr>
+        <tr><td>盾卫</td><td class="num">11</td><td>正面格挡，要求技能破防或绕侧</td><td>保护高威胁后排，但保留破防窗口</td></tr>
+        <tr><td>巫妖</td><td class="num">21</td><td>治疗与有限召唤，要求优先击杀</td><td>祭坛或词缀增强，不允许无限召兵</td></tr>
+        <tr><td>疾风魔（新）</td><td class="num">61</td><td>短时蓄力后弧形突袭，考验二次走位</td><td>与直线冲撞形成不同闪避节奏</td></tr>
+        <tr><td>虚空魔（新）</td><td class="num">81</td><td>标记落点后换位，改变目标优先级</td><td>只在小规模组合出现，避免自动锁敌频繁跳变</td></tr>
       </tbody>
     </table></div>
-    <p>所有敌人的实际数值都会再乘一次关卡缩放（见第 09 节）：第 5 关小鬼的血是 34 × 2.6 = 88，胖魔是 468，眼球怪 166。上表是「第 1 关基准值」。</p>
-
-    <h3>精英</h3>
-    <p>第 2/3/4 关的最后会单独刷一只精英（胖魔 / 眼球怪 / 巫妖）：血量 ×2.4、伤害 ×1.35、速度 ×1.05，外观同模型但带精英描边。精英没有新增招式，作用是「在进下一关前压一次极限」——尤其第 4 关的精英巫妖会一边回血一边召兵，是整局最考验清场效率的一场。</p>
-
-    <h3>魔王巴尔的三阶段</h3>
+    <h3>精英词缀</h3>
     <div class="tw"><table>
-      <thead><tr><th style="width:110px">阶段</th><th style="width:130px">触发</th><th>招式池</th></tr></thead>
+      <thead><tr><th>词缀</th><th>开放</th><th>规则</th><th>反制</th></tr></thead>
       <tbody>
-        <tr><td>一阶段</td><td>血量 &gt; 62%</td><td>砸地（半径 96，连砸 2 下，间隔 0.55 秒并带预警圈）、冲撞（蓄力 0.75 秒后 760 px/s 撞 0.62 秒，撞到 1.2 倍伤害）</td></tr>
-        <tr><td>二阶段</td><td>30%–62%</td><td>加入召唤（一次 3 只，首只必为胖魔）与陨石（5 颗，半径 72，按 0.85 + i×0.12 秒依次落）</td></tr>
-        <tr><td>三阶段</td><td>&lt; 30%</td><td>再加入环形弹幕（一圈 20 发、240 px/s，连放 2 轮）；砸地改为连砸 3 下，冷却普遍缩短</td></tr>
+        <tr><td>狂暴</td><td>第 3 章</td><td>低于 35% 生命时攻击频率 +20%</td><td>保留爆发收尾；不增加移动速度</td></tr>
+        <tr><td>护卫</td><td>第 4 章</td><td>每 8 秒给附近普通怪一次短护盾</td><td>优先击杀精英；护盾有明确环形的持续时间</td></tr>
+        <tr><td>爆裂</td><td>第 5 章</td><td>死亡 1 秒后留下爆炸圈，也能伤敌</td><td>及时撤离或借力清场</td></tr>
+        <tr><td>吸血</td><td>第 7 章</td><td>重击命中玩家才恢复少量生命</td><td>通过预警闪避阻止回血</td></tr>
       </tbody>
     </table></div>
-    <p>每阶段切换会弹横幅、震屏并播一次低频号角。魔王出场时竞技场顶部出现专属血条，<b>血量不会因为召唤或回血恢复</b>。击破后有 1.9 秒的连环爆炸演出再进结算——这 1.9 秒里场上残余小怪仍会攻击，属于「赢了也别站着」的收尾设计。</p>
+    <p>普通精英最多一个词缀；第 9 章起仅关底精英允许双词缀。词缀组合禁止「吸血 + 高频不可打断」这类无反制搭配。</p>
   </section>
 
   <section id="s8">
-    <h2><span class="n">08</span>关卡与波次</h2>
-    <p>五关是线性数据：每关一套主题配色、一个标准时间（par）、3–4 波敌人，末尾按需接精英或魔王。波次里的敌人构成会先铺开再打乱，所以同一波每次刷怪顺序不同，但总数固定。</p>
+    <h2><span class="n">08</span>十章百关总览</h2>
+    <p>每章固定 10 关。第 5 关为小 BOSS，第 10 关为大 BOSS；逢 10 不再额外叠加小 BOSS。章节结束更换主题和主机制，下一章第 1 关降低组合密度，形成锯齿形难度。</p>
     <div class="tw"><table class="wide">
-      <thead><tr><th class="num" style="width:44px">关</th><th style="width:110px">名称</th><th style="width:96px">主题</th><th class="num" style="width:88px">par</th><th class="num" style="width:66px">波数</th><th class="num" style="width:90px">敌人总数</th><th style="width:96px">精英</th><th>关底</th></tr></thead>
+      <thead><tr><th>章节 / 关卡</th><th>主题</th><th>新增与教学重点</th><th>场地机制</th><th>小 BOSS / 大 BOSS</th></tr></thead>
       <tbody>
-        <tr><td class="num">1</td><td>血色海滩</td><td>beach</td><td class="num">75 s</td><td class="num">3</td><td class="num">24</td><td>—</td><td>—</td></tr>
-        <tr><td class="num">2</td><td>熔岩窟</td><td>lava</td><td class="num">100 s</td><td class="num">3</td><td class="num">34</td><td>胖魔</td><td>精英战</td></tr>
-        <tr><td class="num">3</td><td>骸骨荒原</td><td>bone</td><td class="num">125 s</td><td class="num">4</td><td class="num">67</td><td>眼球怪</td><td>精英战</td></tr>
-        <tr><td class="num">4</td><td>咒怨祭坛</td><td>altar</td><td class="num">155 s</td><td class="num">4</td><td class="num">67</td><td>巫妖</td><td>精英战</td></tr>
-        <tr><td class="num">5</td><td>恶魔王座</td><td>throne</td><td class="num">230 s</td><td class="num">4</td><td class="num">79</td><td>—</td><td>魔王巴尔</td></tr>
+        <tr><td>1 · 1–10</td><td>血色海滩</td><td>基础移动、四技能、小鬼 / 胖魔 / 眼球怪 / 炸弹鬼</td><td>安全场地；第 8 关加入可伤敌的爆炸物</td><td>岩甲胖魔 / 炎狱魔王·巴尔</td></tr>
+        <tr><td>2 · 11–20</td><td>熔岩窟</td><td>盾卫、破防窗口、进阶强化</td><td>周期熔岩裂隙，同样伤害敌人</td><td>熔核盾卫 / 熔岩巨神</td></tr>
+        <tr><td>3 · 21–30</td><td>骸骨荒原</td><td>巫妖、有限召唤、狂暴词缀</td><td>骨刺预警区，鼓励持续转移</td><td>爆弹暴君 / 骸骨巨像</td></tr>
+        <tr><td>4 · 31–40</td><td>咒怨祭坛</td><td>敌人组合、护卫词缀、优先级</td><td>祭坛强化附近敌人，可被打断</td><td>祭坛巫妖 / 咒怨圣女</td></tr>
+        <tr><td>5 · 41–50</td><td>恶魔王座</td><td>六类旧敌人混合、爆裂词缀</td><td>王座阶段改变安全区域</td><td>王座处刑者 / 恶魔执政官</td></tr>
+        <tr><td>6 · 51–60</td><td>霜寒裂谷</td><td>减速区与冲刺管理，不提高敌人基础速度</td><td>冰面短惯性、裂缝减速，均提前显示边界</td><td>霜脊胖魔 / 冰渊守望者</td></tr>
+        <tr><td>7 · 61–70</td><td>风暴神殿</td><td>疾风魔、吸血词缀、连续闪避</td><td>风向推动弹体与危险区，不直接夺走角色控制</td><td>雷翼眼球 / 风暴领主</td></tr>
+        <tr><td>8 · 71–80</td><td>幽影回廊</td><td>视野节奏与位置预判，不做全黑</td><td>暗影区降低远处可见度，但预警始终清晰</td><td>影袭统领 / 无面魔王</td></tr>
+        <tr><td>9 · 81–90</td><td>虚空星门</td><td>虚空魔、有限双词缀精英</td><td>成对星门改变敌人入场位置，出口提前标记</td><td>蚀星巫妖 / 虚空之眼</td></tr>
+        <tr><td>10 · 91–100</td><td>终焉王城</td><td>全部机制综合复习，不再引入新基础规则</td><td>分阶段复用旧机制，避免所有场地效果同时开启</td><td>红绫心魔 / 终焉魔神</td></tr>
       </tbody>
     </table></div>
-
-    <div class="days">
-      <div class="day"><b>第 1 关 · 血色海滩</b><span>5 / 8 / 11 只小鬼，合计 24</span><span>开场 900 ms 起连播 5 条教学提示</span><span>目标：让玩家在 90 秒内摸清自动普攻的节奏</span></div>
-      <div class="day"><b>第 2 关 · 熔岩窟</b><span>6 小鬼 + 2 眼球怪 / 9 小鬼 + 2 胖魔 / 10 小鬼 + 3 眼球怪 + 2 胖魔</span><span>末尾接精英胖魔</span><span>首次出现远程与冲撞，必须学会「先清远程」</span></div>
-      <div class="day"><b>第 3 关 · 骸骨荒原</b><span>8 小鬼 + 2 炸弹鬼 / 10 小鬼 + 3 眼球怪 + 3 炸弹鬼</span><span>3 胖魔 + 12 小鬼 + 4 炸弹鬼 / 4 眼球怪 + 4 炸弹鬼 + 14 小鬼</span><span>炸弹鬼自爆对友军 90 伤，是「借刀杀人」的教学场</span></div>
-      <div class="day"><b>第 4 关 · 咒怨祭坛</b><span>3 盾卫 + 8 小鬼 / 2 巫妖 + 3 眼球怪 + 10 小鬼</span><span>4 盾卫 + 4 炸弹鬼 + 12 小鬼 / 3 巫妖 + 4 胖魔 + 14 小鬼</span><span>盾卫正面减伤逼你绕背或用技能破防</span></div>
-      <div class="day"><b>第 5 关 · 恶魔王座</b><span>12 小鬼 + 3 炸弹鬼 / 4 盾卫 + 2 巫妖 + 10 小鬼</span><span>5 胖魔 + 5 眼球怪 + 12 小鬼 / 3 巫妖 + 4 盾卫 + 5 炸弹鬼 + 14 小鬼</span><span>清完 4 波后 2 秒进魔王，魔王全程可召兵</span></div>
-    </div>
-
-    <h3>节奏与出怪</h3>
-    <p>进场后有 1.6 秒准备时间，每波之间 1.9 秒（并回 3% 血），精英前 1.6 秒预警，魔王前 2.0 秒。单只出怪间隔按关卡递减：<code>max(0.16, 0.42 − 0.05 × 关序)</code>，即第 1 关 0.42 秒、第 5 关 0.22 秒。也就是说第 5 关的 4 波虽然只比第 3 关多 12 只，但铺开速度快一倍，压迫感主要来自「同时在场」的数量。</p>
-    <p>刷怪点从竞技场四边随机取，且距离玩家必须大于 168 px，最多重试 24 次；每次出现先播 0.6 秒的传送门特效，敌人这 0.55 秒内不可被选中也不可被打——避免「刚出生就被自动普攻打死」的诡异手感。</p>
+    <div class="box key"><b>内容生产原则：</b>10 章共享竞技场、敌人和技能框架，以主题、组合、场地参数和 BOSS 招式变化形成差异。100 关使用配置数据驱动，不复制 100 份流程代码。</div>
   </section>
 
   <section id="s9">
-    <h2><span class="n">09</span>难度曲线与评级</h2>
-    <h3>关卡缩放</h3>
-    <p>同一套敌人数值，靠三个系数按关卡放大：</p>
-    <div class="tw"><table>
-      <thead><tr><th style="width:110px">系数</th><th style="width:190px">公式</th><th>第 1 关 → 第 5 关</th></tr></thead>
+    <h2><span class="n">09</span>第一章逐关设计</h2>
+    <p>第一章是完整垂直切片：必须能独立验证自动推进、成长、存档、双端操作和大小 BOSS。后续章节先沿用同一结构，再逐个增加机制。</p>
+    <div class="tw"><table class="wide">
+      <thead><tr><th>关</th><th>波次 / 构成</th><th>教学目标</th><th>目标时长</th><th>恢复与奖励</th></tr></thead>
       <tbody>
-        <tr><td>血量</td><td><code>1 + 0.40 × (关 − 1)</code></td><td class="num">1.00× → 2.60×</td></tr>
-        <tr><td>伤害</td><td><code>1 + 0.26 × (关 − 1)</code></td><td class="num">1.00× → 2.04×</td></tr>
-        <tr><td>速度</td><td><code>1 + 0.055 × (关 − 1)</code></td><td class="num">1.00× → 1.22×</td></tr>
+        <tr><td class="num">1</td><td>2 波：5 / 8 小鬼</td><td>移动、自动锁敌、Z 解围；提示按设备切换</td><td>35–45 秒</td><td>+6%；基础三选一</td></tr>
+        <tr><td class="num">2</td><td>2 波：小鬼 + 各 1–2 胖魔</td><td>识别冲撞预警，学习空格 / 闪避</td><td>40–50 秒</td><td>+6%；基础三选一</td></tr>
+        <tr><td class="num">3</td><td>2 波：小鬼 + 眼球怪</td><td>优先处理远程，学习 X 穿越弹体</td><td>40–55 秒</td><td>+6%；基础三选一</td></tr>
+        <tr><td class="num">4</td><td>2 波：小鬼、胖魔、眼球怪混合</td><td>C 聚怪后接 Z 或 X；首次小组合考</td><td>45–60 秒</td><td>+6%；基础三选一</td></tr>
+        <tr><td class="num">5</td><td>1 波少量小鬼 + 岩甲胖魔</td><td>小 BOSS：冲撞、破甲、输出窗口</td><td>60–80 秒</td><td>+20%；进阶三选一</td></tr>
+        <tr><td class="num">6</td><td>2 波：少量小鬼 + 炸弹鬼</td><td>安全教学自爆与友军伤害</td><td>40–55 秒</td><td>+6%；基础三选一</td></tr>
+        <tr><td class="num">7</td><td>2 波：眼球怪 + 炸弹鬼 + 小鬼</td><td>引爆炸弹鬼处理远程包围</td><td>45–60 秒</td><td>+6%；进阶三选一</td></tr>
+        <tr><td class="num">8</td><td>3 波：混合敌人 + 场景爆炸物</td><td>把聚怪构筑用于环境联动</td><td>50–65 秒</td><td>+6%；进阶三选一</td></tr>
+        <tr><td class="num">9</td><td>2 波 + 1 精英胖魔</td><td>大 BOSS 前综合考，保留怒气决策</td><td>55–70 秒</td><td>+6%；进阶三选一</td></tr>
+        <tr><td class="num">10</td><td>1 波混合小怪 + 三阶段巴尔</td><td>砸地、冲撞、召唤、陨石、环形弹幕</td><td>100–140 秒</td><td>+35%；核心三选一</td></tr>
       </tbody>
     </table></div>
-    <p>血量涨得最快、速度几乎不动，这是刻意的：<b>让难度来自「要打更久」，而不是「跑不过」</b>。速度一旦涨过 300，自动普攻的 118 射程就会显得像在追人，操作会崩。</p>
-
-    <h3>星级与评级</h3>
-    <p>结算里同时存在两套评价，口径并不相同，这是当前设计里最容易被误解的地方。</p>
-    <div class="tw"><table>
-      <thead><tr><th style="width:110px">体系</th><th style="width:220px">计算</th><th>结果</th></tr></thead>
-      <tbody>
-        <tr><td>星级</td><td>只看剩余血量：≥70% 三星、≥40% 两星、其余一星</td><td>和用时完全无关</td></tr>
-        <tr><td>评级</td><td><code>分数 = 血量比例 × 0.6 + 时间系数 × 0.4</code>，时间系数为 par 内 1.0 / par×1.4 内 0.6 / 其余 0.3</td><td>S ≥ 0.85，A ≥ 0.7，B ≥ 0.5，C 其余</td></tr>
-        <tr><td>最佳时间</td><td>只记录更快的成绩</td><td>卡面显示「最佳 03:12」</td></tr>
-      </tbody>
-    </table></div>
-    <div class="box warn"><b>已知口径冲突：</b>血量 70% 但拖到 par×1.4 之外，会同时出现「★★★」和「B」。三星门槛太低、评级对时间又太敏感，两者并列展示时玩家会以为哪里算错了。修法二选一：把星级也纳入时间维度，或让结算只展示评级、把星级改成「无伤 / 半血 / 险胜」这种血量子档。</div>
-
-    <h3>解锁</h3>
-    <p>通关第 N 关把解锁上限推到 <code>min(5, N + 1)</code>，即一次只多开一关；标题页的「开始」不是从头开始，而是直接进最高解锁关，方便回来续关。星级取历史最大值（重打低分不掉星），最佳时间取最小值。</p>
+    <p>首章合计目标约 8–11 分钟（不含玩家长时间停留）。第 1 关教学不一次性连播长文本，只在对应机制首次出现时给一条短提示；之后可从帮助页重看。</p>
   </section>
 
   <section id="s10">
-    <h2><span class="n">10</span>表现层：飘带、打击感与音效</h2>
-    <h3>红绫飘带</h3>
-    <p>20 个节点、8.5 px 段长，锚点在头顶（<code>y − 103</code>，跳跃时随 <code>jumpZ</code> 上移）。每帧分 3 个子步积分，每步对相邻节点做 5 次距离约束：首节固定，其余按 0.5 / 0.5 分配修正，所以尾巴有「拖拽感」而不僵硬。加速度由四部分组成：</p>
-    <ul>
-      <li>风：<code>sin(2.1t) + 0.62 sin(5.3t+1.7) + 0.34 sin(11.3t+0.4)</code>，乘以 9000，越靠尾端权重越大（0.22 → 约 1.03）。</li>
-      <li>重力：固定 9200，让静止时自然垂落成 S。</li>
-      <li>速度反拖：水平 −vx×150×k、垂直 −vy×120×k，跑动时整条向后飞。</li>
-      <li>湍流：每个节点相位差 0.92 / 0.66，制造沿链条传播的波浪。</li>
-    </ul>
-    <p>绘制用「沿法线加宽」的双边带（宽度从 8.5×0.5 线性收到 10%），配四段红色渐变、18 px 红光和一条 55% 透明的高光中线，尾端补一颗 2.2 px 的碎光点。死亡时锚点落到地面高度（<code>y − 12</code>），飘带就摊在尸体旁边。</p>
-
-    <h3>打击感清单</h3>
+    <h2><span class="n">10</span>波次与关卡模板</h2>
     <div class="tw"><table>
-      <thead><tr><th style="width:150px">手段</th><th>当前口径</th></tr></thead>
+      <thead><tr><th>模板</th><th>结构</th><th>目标时长</th><th>使用范围</th></tr></thead>
       <tbody>
-        <tr><td>震屏</td><td>正弦衰减（9 Hz 相位、每秒衰减 40），只在大招落地、砸地、Boss 阶段切换等重击触发；<b>击杀与普攻不震屏</b></td></tr>
-        <tr><td>顿帧</td><td>仅技能命中，最长 0.02–0.03 秒，期间 <code>dt = raw × 0.06</code>；普攻完全不做</td></tr>
-        <tr><td>慢放</td><td>大招起手 0.5× 0.12 s、收尾 0.55× 0.18 s、Boss 死亡 0.22× 1.4 s、角色死亡 0.25× 1.1 s</td></tr>
-        <tr><td>伤害数字</td><td>暴击 22 px 金色、普通 16 px 白色；同屏上限 36 条，超出丢最早的</td></tr>
-        <tr><td>粒子</td><td>上限 420 个，超出丢最早的；命中 4–8 颗、暴击 8 颗、大招收尾 30 颗</td></tr>
-        <tr><td>受击反馈</td><td>全屏红闪 0.28 强度、角色红闪 0.3 秒、击退 260、短促低频受击音</td></tr>
-        <tr><td>残影</td><td>滑斩期间每 22 ms 留一帧，存活 0.36 秒，透明度从 0.45 线性衰减到 0</td></tr>
+        <tr><td>教学关</td><td>2 波；一个新机制 + 低数量旧敌人</td><td>35–50 秒</td><td>新敌人或新场地首次出现</td></tr>
+        <tr><td>标准关</td><td>2–3 波；两种主要威胁，最多一种辅助威胁</td><td>40–65 秒</td><td>大多数普通关</td></tr>
+        <tr><td>缓冲关</td><td>2 波；降低精英与远程密度，突出新强化爽感</td><td>35–50 秒</td><td>大 BOSS 后、每章第 1 关</td></tr>
+        <tr><td>小 BOSS 关</td><td>1 波前导小怪 + 单 BOSS；不另接普通精英</td><td>60–90 秒</td><td>5、15、25……95</td></tr>
+        <tr><td>大 BOSS 关</td><td>1 波前导小怪 + 2–3 阶段 BOSS</td><td>90–150 秒</td><td>10、20、30……100</td></tr>
       </tbody>
     </table></div>
-    <div class="box key"><b>关键修复记录：</b>最初的震屏每帧取随机偏移，视觉上是「抖成一片糊」，反而被读成掉帧。改成连续正弦位移后同样的强度就顺滑得多；再把击杀震屏去掉，连杀时画面才稳得住。</div>
-
-    <h3>音效与音乐</h3>
-    <p>全部由 WebAudio 合成，主音量 0.55：17 种音效（挥砍两种、命中、暴击、受伤、起跳、落地、甩鞭、旋风、大招、回血、拾取、死亡、波次、UI、Boss、爆炸）。背景音乐是一个 32 步、每步 0.125 秒的循环，用小调五声音阶（0/3/5/7/10）铺贝斯，第 0 步底鼓、第 8 步军鼓、每 4 步踩镲，旋律 55% 概率随机插入——所以每局的音乐走向不同，但密度恒定。</p>
-    <p>音色禁区：低频锯齿波叠出来的扫频（比如旧版波次音的 110→165 Hz、旧版大招的 80→520 Hz）听感接近电流嗡鸣 / 放屁，实测被玩家第一时间投诉，已全部退役。波次提示现在用 D5→A5 两声纯正弦铃音叠一层上扬的气流噪声；无影斩改成「蓄力吸气 → 低频正弦冲击 → 金属斩击噪声 → 220/330/440 和弦余韵」。新增音效一律先过这一关：正弦 / 三角波打底，锯齿只用于极短的打击层。</p>
+    <h3>波次配置使用威胁预算</h3>
+    <p>不单纯写死怪物总数。每类敌人有威胁成本，小鬼 1、炸弹鬼 1.5、眼球怪 2、胖魔 / 盾卫 3、巫妖 4、疾风魔 3、虚空魔 4；每波用预算选择固定模板，再只随机入场顺序与合法出怪点。</p>
+    <p>首轮原型波次预算从 <code>6 + 0.08×(关−1) + 1.2×(波序−1)</code> 起步。该公式只用于第一版生成数据，最终以通关时间、受击次数和失败率调整，不能把公式当成已经验证的平衡结果。</p>
+    <h3>公平出怪与节奏</h3>
+    <ul>
+      <li>出怪点离玩家至少 200 px，不在当前移动方向贴身生成，不在触控按钮遮挡区生成。</li>
+      <li>入场预警与不可选中时间保持一致；结束后才允许造成伤害。</li>
+      <li>普通关波间 1.5–2 秒；清波回血有文本与血条反馈。</li>
+      <li>同屏逻辑敌人上限先以 32 验证，双端一致；达到上限时延迟后续出怪，不偷偷减少总敌人或更换 AI。</li>
+      <li>战斗目标是保持可读密度，而非把百关后期变成满屏弹幕。</li>
+    </ul>
   </section>
 
   <section id="s11">
-    <h2><span class="n">11</span>UI 流程与存档</h2>
-    <div class="tw"><table>
-      <thead><tr><th style="width:120px">界面</th><th>内容与去向</th></tr></thead>
+    <h2><span class="n">11</span>大小 BOSS 体系</h2>
+    <h3>小 BOSS：一个核心考点</h3>
+    <p>小 BOSS 采用现有敌人放大与一招新变化，1–2 阶段即可。重点检验本章前半段技能，例如岩甲胖魔在冲撞撞墙后破甲，祭坛巫妖在治疗读条时暴露弱点。目标击杀时间 45–75 秒，不靠超大血量延长。</p>
+    <h3>大 BOSS：章节综合考试</h3>
+    <p>大 BOSS 使用 2–3 阶段，每阶段只增加一个主要变化。阶段切换时清除无法避免的旧弹体、暂停伤害约 1 秒并展示新招式预警。BOSS 被击败后立即停止全场伤害，再播放收尾演出。</p>
+    <div class="tw"><table class="wide">
+      <thead><tr><th>关</th><th>BOSS</th><th>核心招式 / 反制</th><th>复用与新增范围</th></tr></thead>
       <tbody>
-        <tr><td>标题</td><td>开始（直接进最高解锁关）/ 选关 / 帮助；Enter 等同开始</td></tr>
-        <tr><td>选关</td><td>5 张关卡卡：编号、名称、一句描述、第一波敌人颜色点、星级、最佳时间；未解锁显示「未解锁」</td></tr>
-        <tr><td>游戏中</td><td>顶部 HUD（血条、怒气条、击杀数、计时、波次）+ 底部技能条（Z/X/C 圆环冷却、V 怒气环）+ 连击数 + Boss 血条</td></tr>
-        <tr><td>暂停</td><td>继续 / 重开 / 退出到选关；Esc 或 P 触发，窗口失焦与切标签也会自动暂停。底部三颗按钮用 3 等分栅格，不管「继续」「重新开始」「返回选关」字数多少，宽度一律相等，结算页同款栅格</td></tr>
-        <tr><td>结算</td><td>评级字母、星级、用时、击杀、最高连击、剩余血量百分比；下一关（最后一关隐藏）/ 再玩一次 / 选关</td></tr>
-        <tr><td>失败</td><td>同结算布局，评级固定 D、星级全空</td></tr>
+        <tr><td class="num">10</td><td>炎狱魔王·巴尔</td><td>砸地、冲撞、召唤、陨石、环形弹幕；读圈与穿弹</td><td>以当前三阶段巴尔为基础修正收尾</td></tr>
+        <tr><td class="num">20</td><td>熔岩巨神</td><td>连续裂隙后重锤；诱导裂隙伤敌，破防后输出</td><td>复用冲撞 / 预警圈，新增裂隙编排</td></tr>
+        <tr><td class="num">30</td><td>骸骨巨像</td><td>骨刺分区与有限召唤；优先清理召唤点</td><td>复用骨刺场地与召唤规则</td></tr>
+        <tr><td class="num">40</td><td>咒怨圣女</td><td>治疗祭坛与诅咒区；用 C 聚怪后快速转火</td><td>复用巫妖职责，新增可打断读条</td></tr>
+        <tr><td class="num">50</td><td>恶魔执政官</td><td>安全区随阶段收缩；保留明确边界和出口</td><td>组合旧招式，不叠加全部场地机制</td></tr>
+        <tr><td class="num">60</td><td>冰渊守望者</td><td>冰面冲锋与冻结圈；控制冲刺距离，不连续硬控</td><td>复用胖魔冲撞，新增冰面参数</td></tr>
+        <tr><td class="num">70</td><td>风暴领主</td><td>风向弹体与弧形突袭；看箭头改变走位路线</td><td>复用弹体，新增风向偏移</td></tr>
+        <tr><td class="num">80</td><td>无面魔王</td><td>暗影中复刻玩家招式前摇；预警永远可见</td><td>复用技能演出，限制视野但不隐藏判定</td></tr>
+        <tr><td class="num">90</td><td>虚空之眼</td><td>星门换位与交叉弹幕；出口先标记再传送</td><td>复用星门与弹幕，新增固定换位逻辑</td></tr>
+        <tr><td class="num">100</td><td>终焉魔神</td><td>三阶段分别复习位移、优先级和资源管理；最终阶段不新增陌生规则</td><td>综合精选机制，禁止无预警全屏攻击</td></tr>
       </tbody>
     </table></div>
-    <div class="tw"><table>
-      <thead><tr><th style="width:190px">存档字段</th><th>含义</th></tr></thead>
-      <tbody>
-        <tr><td><code>stickman_demon_isle_v1</code></td><td>localStorage 单键，JSON 对象</td></tr>
-        <tr><td><code>unlocked</code></td><td>已解锁的最高关序号，初始 1，上限 5</td></tr>
-        <tr><td><code>stars[关]</code></td><td>每关星级 0–3，取历史最大</td></tr>
-        <tr><td><code>best[关]</code></td><td>每关最快通关时间（秒），取历史最小</td></tr>
-      </tbody>
-    </table></div>
-    <p>读取时只校验 <code>unlocked</code> 是否为数字，其余字段缺失按空处理；写入失败（隐私模式、配额满）静默忽略，不影响游玩。</p>
+    <p>第 95 关「红绫心魔」是最终小 BOSS，采用玩家技能的清晰镜像与更长前摇，帮助玩家在进入最终关前完成最后一次构筑检验。</p>
   </section>
 
   <section id="s12">
-    <h2><span class="n">12</span>渲染与性能</h2>
-    <p>这是一个每秒要画 60 帧、同屏最多 26 个单位加 400 个粒子的项目，性能取舍比画面细节更重要。</p>
+    <h2><span class="n">12</span>难度曲线与评级</h2>
+    <h3>数值只做基线，组合负责主要递进</h3>
+    <p>设关号为 <code>n</code>，章号为 <code>c</code>。首轮原型建议从以下系数开始，后续每 10 关根据实测调整，不允许直接沿用当前五关公式把第 100 关血量放大到约 40 倍。</p>
     <div class="tw"><table>
-      <thead><tr><th style="width:150px">项</th><th>口径</th></tr></thead>
+      <thead><tr><th>参数</th><th>首轮原型公式 / 上限</th><th>第 100 关理论值</th><th>约束</th></tr></thead>
       <tbody>
-        <tr><td>逻辑分辨率</td><td>1280×720，竞技场四边内缩 46 px（可活动区 1188×628）</td></tr>
-        <tr><td>像素比</td><td><code>DPR = min(devicePixelRatio, 2)</code>，避免 4K 屏上 4 倍填充</td></tr>
-        <tr><td>自适应倍率</td><td>开局累计 240 帧，平均帧耗时 &gt; 20.5 ms 且当前倍率 &gt; 1.3 时降到 1.25</td></tr>
-        <tr><td>地面</td><td>每关开局把主题地面（径向渐变 + 岩石斑点 + 熔岩裂纹）预渲染到离屏 canvas，每帧只 blit 一次</td></tr>
-        <tr><td>HUD 刷新</td><td>30 Hz（每两帧一次），且文本 / 圆环都用缓存比较，值没变就不写 DOM</td></tr>
-        <tr><td>连击弹跳</td><td>用 Web Animations 做 scale 动画，避免读布局触发重排</td></tr>
-        <tr><td>时间</td><td><code>G.time += raw × slow</code>；顿帧时 <code>dt = raw × 0.06</code>，所有动画共用同一个 dt 来源</td></tr>
+        <tr><td>普通敌人生命</td><td><code>1 + 0.045×(n−1) + 0.08×(c−1)</code></td><td class="num">12.655×</td><td>同时由 99 次强化抵消；以击杀时间校验</td></tr>
+        <tr><td>普通敌人伤害</td><td><code>min(2.4, 1 + 0.018×(n−1))</code></td><td class="num">2.4×</td><td>避免后期一次失误直接清空满血</td></tr>
+        <tr><td>移动速度</td><td><code>min(1.18, 1 + 0.002×(n−1))</code></td><td class="num">1.18×</td><td>不让近战敌人快过玩家的可反应移动体系</td></tr>
+        <tr><td>出怪间隔</td><td><code>max(0.20, 0.40 − 0.002×(n−1))</code></td><td class="num">0.20 秒</td><td>受同屏 32 上限和预警时间共同限制</td></tr>
       </tbody>
     </table></div>
-    <div class="box warn"><b>注意：</b>自适应倍率只在开局判定一次（<code>perfChecked</code> 不再复位），所以「进游戏时流畅、怪多了才卡」的情况不会被自动降档。要么把检测改成滑动窗口，要么在 Boss 战前重测一次。</div>
+    <p>平衡目标：普通小怪在对应标准构筑下约 1–3 秒解决，精英约 8–15 秒，小 BOSS 约 45–75 秒，大 BOSS 约 80–130 秒。若超时，先检查玩家输出成长与敌人组合，再调整生命；一次只改一个高杠杆参数。</p>
+    <h3>统一评级与星级</h3>
+    <div class="tw"><table>
+      <thead><tr><th>结果</th><th>规则</th><th>展示</th></tr></thead>
+      <tbody>
+        <tr><td>评级分</td><td>剩余生命比例 ×60% + 时间系数 ×40%；沿用 par / par×1.4 分档作为首轮基线</td><td>只产生一个字母评级</td></tr>
+        <tr><td>S / A / B / C</td><td>S ≥0.85；A ≥0.70；B ≥0.50；其余 C</td><td>分别映射 3 / 2 / 1 / 1 星</td></tr>
+        <tr><td>D</td><td>挑战失败</td><td>0 星，不覆盖历史最佳</td></tr>
+      </tbody>
+    </table></div>
+    <p>连击继续用于观感和结算回顾，不纳入基础星级，避免玩家为评分被迫冒进。闯关模式记录本次成绩；单关练习使用相同公式但独立保存最佳。</p>
+    <h3>失败辅助</h3>
+    <p>同一关连续失败 3 次后，明确提供可选辅助：「本关初始生命 +20%」或「敌方伤害 −15%」。玩家主动选择才生效，辅助成绩正常解锁下一关但标注使用辅助；绝不暗中改变难度。</p>
   </section>
 
   <section id="s13">
-    <h2><span class="n">13</span>已知问题与迭代建议</h2>
-    <p>以下都是当前实现里真实存在的取舍或缺口，按「影响体验的程度」排序。</p>
+    <h2><span class="n">13</span>PC 与移动端操作</h2>
     <div class="tw"><table class="wide">
-      <thead><tr><th style="width:230px">问题</th><th>表现</th><th style="width:280px">建议</th></tr></thead>
+      <thead><tr><th>行为</th><th>PC</th><th>移动端横屏</th><th>共同验收点</th></tr></thead>
       <tbody>
-        <tr><td>整关无检查点</td><td>第 5 关要打 4 波加魔王约 4 分钟，中途死亡全部重来，长局挫败感强</td><td>按波次存档：允许从「上一次波次清除」复活，或失败后保留精英 / 魔王阶段的进度</td></tr>
-        <tr><td>星级与评级口径冲突</td><td>70% 血拿到三星，却因为超时只评 B，两个数字并列显示显得自相矛盾</td><td>把时间并入星级，或把星级改成血量子档（无伤 / 半血 / 险胜）</td></tr>
-        <tr><td>大招滚雪球</td><td>大招期间击杀仍回 7 怒，实测一次能攒回 56，连续开大节奏偏快</td><td>V 结束加 1–2 秒硬冷却，或把击杀回怒降到 4</td></tr>
-        <tr><td>盾卫只能靠技能破</td><td>正面普攻只吃 12%，新玩家容易卡在盾卫前，绕背又和自动锁敌的朝向滞回打架</td><td>给盾卫一个「被击退或受技能命中后 1.5 秒破防」的窗口，把减伤变成节奏而非墙</td></tr>
-        <tr><td>巫妖无限召兵</td><td>只受「存活 26 只」限制，第 4/5 关若不清巫妖会持续堆兵</td><td>给召唤设总次数上限（如 8 只），或让巫妖召唤时露出 0.6 秒硬直</td></tr>
-        <tr><td>清波回血没有反馈</td><td><code>healPlayer(0.03,false)</code> 不飘数字，玩家不知道自己在回血</td><td>改成飘「波次清除 +3%」并在 HUD 血条上闪一次绿光</td></tr>
-        <tr><td>结算信息不全</td><td><code>dmgTaken</code> 与 <code>healed</code> 已统计但没展示，玩家看不到自己挨了多少、回了多少</td><td>结算加「承受伤害 / 有效治疗」两行，作为改进依据</td></tr>
-        <tr><td>只差手柄</td><td>键盘与横屏触控已齐，手柄没接，竖屏只做加载与提示、不做战斗画面重排</td><td>需要时接 Gamepad API，竖屏若要重排再单独立项</td></tr>
-        <tr><td>选关卡敌人点不完整</td><td>颜色点只取第一波，第 5 关卡面看不到盾卫与巫妖</td><td>改成「本关全波次出现过的敌人类型」去重展示</td></tr>
-        <tr><td>自适应降档只测一次</td><td>开局流畅、后期怪多才卡的情况不会被纠正</td><td>改为滑动窗口，并在 Boss 出场时重测</td></tr>
+        <tr><td>移动</td><td>WASD / 方向键</td><td>左下摇杆，连续方向</td><td>同一基础速度、加速度和对角线归一化</td></tr>
+        <tr><td>闪避</td><td>空格</td><td>独立「闪」按钮</td><td>同一无敌与冷却；无方向时采用同一后撤规则</td></tr>
+        <tr><td>四技能</td><td>Z / X / C / V</td><td>右侧 1 大 3 小技能簇</td><td>同一伤害、范围、冷却、怒气规则</td></tr>
+        <tr><td>强化选择</td><td>鼠标、方向键、1/2/3、Enter</td><td>点按强化卡片</td><td>均无限暂停；不选绝不自动推进</td></tr>
+        <tr><td>暂停</td><td>Esc / P / 暂停按钮</td><td>顶部暂停按钮</td><td>冻结战斗和冷却，清空残留输入</td></tr>
+        <tr><td>菜单</td><td>键盘焦点 + 鼠标</td><td>触控</td><td>继续、重试、选关、帮助、声音与辅助均可达</td></tr>
       </tbody>
     </table></div>
+    <h3>移动端布局底线</h3>
+    <ul>
+      <li>横屏是完整体验基准；覆盖 568×320、667×375、844×390、932×430 等视口，并叠加左右与底部安全区。</li>
+      <li>常用触控目标不小于 44 CSS px；主技能和摇杆保留现有较大尺寸。技能、闪避、暂停和 HUD 不互相遮挡。</li>
+      <li>支持双指同时移动与放技能；<code>pointercancel</code>、失焦、旋转和打开面板时归零摇杆，防止持续移动或误触。</li>
+      <li>提供按钮尺寸 90% / 100% / 115% 与左右布局镜像选项；只改布局，不改触发范围之外的战斗数值。</li>
+      <li>全屏与锁横屏只能由用户手势尝试；浏览器拒绝时不阻断游戏。强化卡片在矮屏采用紧凑横排，不允许关键按钮离屏。</li>
+    </ul>
+    <h3>PC 操作底线</h3>
+    <p>不要求鼠标瞄准；全部战斗可以只用键盘完成。菜单和强化有可见焦点，Enter 不会误触发已经消失的下一关按钮。窗口失焦自动暂停，回来后由玩家主动继续。</p>
+  </section>
+
+  <section id="s14">
+    <h2><span class="n">14</span>界面流程与信息层级</h2>
+    <div class="tw"><table>
+      <thead><tr><th>界面</th><th>必须展示</th><th>操作与限制</th></tr></thead>
+      <tbody>
+        <tr><td>标题</td><td>继续闯关、单关练习、帮助、声音</td><td>有存档时显示「第 N 关 / 当前章节」；无存档时主按钮为开始闯关</td></tr>
+        <tr><td>战斗 HUD</td><td>章节与关号、波次、生命、怒气、四技能、闪避、BOSS 条</td><td>不把总累计统计常驻塞满屏幕；移动端优先保留战斗信息</td></tr>
+        <tr><td>轻结算</td><td>评级、用时、剩余生命、关卡恢复</td><td>约 1.2 秒，无强制点击，不展示长数据报表</td></tr>
+        <tr><td>强化</td><td>三张卡片、名称、一句效果、当前叠层</td><td>无限暂停；无倒计时；有继续前必须选择的明确状态</td></tr>
+        <tr><td>暂停</td><td>继续、重试本关、保存并退出、辅助 / 设置</td><td>说明退出后从本关入口继续；按钮双端等宽且触控可达</td></tr>
+        <tr><td>单关练习</td><td>按章节分组的 100 关、锁定状态、最佳评级与时间</td><td>显示本关敌人全量去重图标，不只显示第一波</td></tr>
+        <tr><td>章节结算</td><td>本章评级、常用流派、总用时、下一章</td><td>核心强化选择后自动进入下一章，不要求再点确认</td></tr>
+        <tr><td>100 关完成</td><td>总评级、总用时、死亡次数、完整构筑</td><td>允许返回标题与重玩；无尽入口待后续单独开放</td></tr>
+      </tbody>
+    </table></div>
+    <p>所有 gameplay 必需文字都使用当前设备能理解的操作提示：PC 显示按键，触屏显示按钮名称。装饰性英文、无意义标签和解释设计意图的文字不进入游戏界面。</p>
+  </section>
+
+  <section id="s15">
+    <h2><span class="n">15</span>存档、续玩与选关</h2>
+    <h3>闯关快照</h3>
+    <p>每次进入新关且强化选择完成后写入快照：当前关号、生命、最大生命、怒气、强化与叠层、辅助状态、累计统计。单关进行中的敌人位置、弹体和波次不保存；退出或浏览器异常关闭后从最近一关入口恢复。</p>
+    <div class="tw"><table>
+      <thead><tr><th>数据</th><th>保存时机</th><th>读取行为</th></tr></thead>
+      <tbody>
+        <tr><td>最高解锁关</td><td>每关胜利</td><td>上限 100，决定选关可见范围</td></tr>
+        <tr><td>闯关快照</td><td>每关入口、强化完成后</td><td>继续闯关恢复；重试本关恢复同一快照</td></tr>
+        <tr><td>单关最佳</td><td>练习模式胜利</td><td>与闯关成绩分开，取更高评级和更短时间</td></tr>
+        <tr><td>设置</td><td>声音、触控尺寸、镜像、减弱震动等改变时</td><td>跨会话保留，不影响战斗公平性</td></tr>
+      </tbody>
+    </table></div>
+    <h3>存档容错与旧版迁移</h3>
+    <p>新版使用独立版本字段并做字段级校验；损坏或写入失败时保留可玩的新会话并给出非阻断提示。读取现有 <code>stickman_demon_isle_v1</code> 时只迁移最高解锁进度；由于关卡结构、时长和评价已经重构，旧星级与最佳时间不直接冒充新版成绩，旧键也不删除。</p>
+    <h3>为什么保留选关</h3>
+    <p>选关用于重玩、补评级、BOSS 练习和短时游玩。进入练习关时使用该章预设的标准强化模板与满血状态，不读取玩家过强或过弱的闯关构筑，也不覆盖闯关快照。这样第 50 关既不会因零基础而无法玩，也不会污染主流程成长。</p>
+  </section>
+
+  <section id="s16">
+    <h2><span class="n">16</span>表现、性能与无障碍</h2>
+    <h3>表现反馈</h3>
+    <ul>
+      <li>保留红绫与技能残影；普通击杀不震屏，重击震屏短促且可减弱。</li>
+      <li>危险区域同时有轮廓、形状 / 方向和动画前摇，不只靠红绿颜色区分。</li>
+      <li>强化获得、破防、清波恢复和 BOSS 阶段变化各有独立反馈，但同屏横幅最多一条。</li>
+      <li>技能伤害数字和粒子设上限；降低视觉档位时保留预警圈、命中判定与输入反馈。</li>
+    </ul>
+    <h3>持续性能治理</h3>
+    <div class="tw"><table>
+      <thead><tr><th>项目</th><th>目标口径</th></tr></thead>
+      <tbody>
+        <tr><td>帧率</td><td>参考设备以 60 fps 为目标；高负载允许稳定 30 fps，不能在 BOSS 阶段突然长时间卡顿</td></tr>
+        <tr><td>测量</td><td>使用持续滑动窗口，覆盖普通关、最高密度波次、大小 BOSS 和长时间连续运行</td></tr>
+        <tr><td>降档</td><td>带迟滞地调整内部渲染倍率、粒子和装饰光效；不修改敌人数量、AI、弹体、判定或计时</td></tr>
+        <tr><td>逻辑</td><td>统一时间步长来源；暂停、切后台和强化界面不会积累一个超大 dt</td></tr>
+        <tr><td>资源</td><td>地面缓存复用，过关临时数据及时清理；100 关连续推进不能持续累积敌人、定时器和音频节点</td></tr>
+      </tbody>
+    </table></div>
+    <h3>可访问性与舒适度</h3>
+    <p>设置提供减弱震屏、减弱全屏闪烁、音量 / 静音、触控尺寸与镜像。系统要求减少动态效果时默认降低非必要演出，但不移除战斗预警。失败后辅助是显式选项，PC 与移动端均可使用。</p>
+  </section>
+
+  <section id="s17">
+    <h2><span class="n">17</span>双端验收标准</h2>
+    <p>“100 分体验”作为验收目标，必须靠实际设备与完整流程验证，不能仅凭设计文档宣称达成。以下均为开发后的硬性检查项。</p>
+    <div class="tw"><table class="wide">
+      <thead><tr><th>类别</th><th>通过标准</th><th>证据</th></tr></thead>
+      <tbody>
+        <tr><td>百关流程</td><td>1→100 无死路；5 的倍数 BOSS 正确；逢 10 不双 BOSS；100 有最终结算</td><td>自动化跳关与状态断言 + 实际连续章节试玩</td></tr>
+        <tr><td>自动推进</td><td>普通关无需点下一关；强化未选时无限暂停；选择后 2 秒过渡；失焦不会自动选</td><td>PC / 触屏分别录像或交互测试记录</td></tr>
+        <tr><td>成长与重试</td><td>血量、怒气、冷却和强化按规则继承；死亡准确恢复本关入口快照</td><td>固定种子 / 固定快照的数值断言</td></tr>
+        <tr><td>选关</td><td>100 关按章展示与解锁；练习模板有效；不污染闯关存档</td><td>高低关、锁定关、返回标题交叉测试</td></tr>
+        <tr><td>PC 操作</td><td>纯键盘可完成全部流程；菜单焦点可见；无按键残留和 Enter 误触</td><td>Windows Chrome / Edge 实测</td></tr>
+        <tr><td>移动操作</td><td>双指移动 + 技能可靠；旋转、失焦、系统手势后无卡摇杆；安全区无遮挡</td><td>Android Chrome 与 iPhone Safari 横屏实测</td></tr>
+        <tr><td>功能对等</td><td>双端敌人、强化、评分、存档、辅助与设置一致，不通过减怪换性能</td><td>同关卡配置与结果对照</td></tr>
+        <tr><td>性能</td><td>最高密度与 BOSS 战无持续严重掉帧；长玩无内存 / 定时器明显累积</td><td>帧耗时、长局记录与 DevTools 检查</td></tr>
+        <tr><td>可读性</td><td>危险预警在最低视觉档与手机上仍清楚；结算与强化无按钮离屏</td><td>四档横屏视口截图与人工试玩</td></tr>
+      </tbody>
+    </table></div>
+    <h3>首轮试玩需要收集的数据</h3>
+    <p>逐关记录完成率、用时、受击、死亡、强化选择和退出点。重点观察第 1 关是否无需解释即可操作、第 5 / 10 关是否公平、连续 10 关后是否疲劳，以及移动端是否因遮挡或多指输入产生额外死亡。</p>
+  </section>
+
+  <section id="s18">
+    <h2><span class="n">18</span>开发分期与确认项</h2>
+    <div class="days">
+      <div class="day"><b>阶段一 · 第一章垂直切片</b><span>重构关卡配置、连续状态、自动推进、强化、快照和双端界面；只完成 1–10 关与两个 BOSS。</span><span>退出条件：双端完整通关并达到第 17 节核心标准。</span></div>
+      <div class="day"><b>阶段二 · 2–5 章</b><span>加入盾卫 / 巫妖修正、精英词缀、场地机制和 11–50 关。</span><span>退出条件：数值曲线与构筑没有明显唯一解。</span></div>
+      <div class="day"><b>阶段三 · 6–10 章</b><span>加入两种新敌人、其余场地与 BOSS，完成 51–100 关。</span><span>退出条件：百关全流程、长局性能和最终结算通过。</span></div>
+      <div class="day"><b>阶段四 · 双端打磨</b><span>实机调触控、反馈、性能、辅助与存档容错；同步更新 README 和文档为实际实现。</span><span>无尽 / 周目不纳入首轮完工条件。</span></div>
+    </div>
+    <h3>请你确认的设计基线</h3>
+    <ol>
+      <li>100 关分为 10 章；每 5 关小 BOSS，每 10 关大 BOSS，逢 10 不重复叠加。</li>
+      <li>过关后三选一强化；不选就无限暂停；选择后自动推进，不再点下一关。</li>
+      <li>闯关继承生命、怒气、冷却和强化；死亡只重试当前关。</li>
+      <li>保留选关，但作为标准战力的单关练习，不污染闯关存档。</li>
+      <li>先做第 1–10 关完整垂直切片，确认好玩后再扩到 100 关。</li>
+      <li>PC 与移动端同关卡、同数值、同功能；移动端以横屏完整体验为准。</li>
+    </ol>
+    <div class="box dark"><b>当前状态：</b>仅设计评审稿。你确认这六项后，才按阶段一开始修改游戏；任何公式与数值在实测后都可以单变量调整，并同步回写本文。</div>
   </section>
 
   <section id="a1">
-    <h2><span class="n">A1</span>附录：源码地图</h2>
-    <p>单文件内部按 19 个编号段落组织，改代码时按表定位。</p>
+    <h2><span class="n">A1</span>附录：现有数值基线</h2>
+    <p>下表是当前五关版本已核对的起点，不代表百关后期仍保持不变。</p>
     <div class="tw"><table class="wide">
-      <thead><tr><th class="num" style="width:70px">行</th><th style="width:170px">段落</th><th>内容</th></tr></thead>
+      <thead><tr><th>项</th><th>当前值</th></tr></thead>
       <tbody>
-        <tr><td class="num">381</td><td>0 工具</td><td>clamp / lerp / ease / angDiff / shade / fmtTime</td></tr>
-        <tr><td class="num">407</td><td>1 画布</td><td>1280×720、DPR、<code>applyRenderScale</code>、竞技场边界</td></tr>
-        <tr><td class="num">432</td><td>2 音频</td><td>tone / noise / 14 种 sfx / 32 步循环音乐</td></tr>
-        <tr><td class="num">569</td><td>3 存档</td><td><code>SAVE_KEY</code>、读写容错</td></tr>
-        <tr><td class="num">580</td><td>4 输入</td><td>keys 表、keydown 分发、失焦暂停</td></tr>
-        <tr><td class="num">616</td><td>5 飘带</td><td>Ribbon 类、Verlet 积分、法线加宽绘制</td></tr>
-        <tr><td class="num">721</td><td>6 关卡数据</td><td><code>ENEMY_TYPES</code> / <code>THEMES</code> / <code>LEVELS</code> / <code>lvScale</code></td></tr>
-        <tr><td class="num">766</td><td>7 状态</td><td><code>G</code> 全局状态、<code>player</code> 字段、<code>resetPlayer</code></td></tr>
-        <tr><td class="num">816</td><td>8 特效</td><td>粒子 / 飘字 / 环 / 预警圈 / 刀光</td></tr>
-        <tr><td class="num">858</td><td>9 战斗</td><td><code>hitEnemy</code> / <code>killEnemy</code> / <code>hurtPlayer</code> / 死亡</td></tr>
-        <tr><td class="num">1002</td><td>普攻</td><td><code>basicAttack</code>：三段、椭圆判定、贴身突进</td></tr>
-        <tr><td class="num">1043</td><td>闪避</td><td><code>dodge</code>：0.17 s / 980 / 无敌 0.28</td></tr>
-        <tr><td class="num">1057</td><td>Z 技能</td><td><code>castZ</code> / <code>zImpact</code></td></tr>
-        <tr><td class="num">1090</td><td>X 技能</td><td><code>castX</code> / <code>xLand</code></td></tr>
-        <tr><td class="num">1141</td><td>C 技能</td><td>威胁表 <code>THREAT</code>、抓取 / 投掷 / 落地眩晕</td></tr>
-        <tr><td class="num">1254</td><td>V 技能</td><td><code>castV</code> / <code>slideEase</code> / <code>ultStep</code> / <code>slideStrike</code> / <code>ultEnd</code></td></tr>
-        <tr><td class="num">1355</td><td>10 玩家更新</td><td>姿态、剑角度、朝向滞回、移动、自动普攻触发、残影、飘带挂点</td></tr>
-        <tr><td class="num">1559</td><td>11 敌人 AI</td><td><code>spawnPoint</code> / <code>makeEnemy</code> / 六种敌人行为 / 分离 / <code>updateBoss</code></td></tr>
-        <tr><td class="num">1950</td><td>12 投射物与拾取</td><td>弹幕、回血 / 怒气包、粒子与飘字老化</td></tr>
-        <tr><td class="num">2014</td><td>13 波次流程</td><td><code>startLevel</code> / <code>startWave</code> / <code>updateWaves</code> / <code>spawnBoss</code> / <code>victory</code> / <code>defeat</code></td></tr>
-        <tr><td class="num">2183</td><td>14 HUD</td><td>血 / 怒 / 技能圆环 / 连击 / Boss 条，30 Hz</td></tr>
-        <tr><td class="num">2262</td><td>15 渲染</td><td>地面预渲染、角色 / 敌人 / 特效 / 飘带绘制</td></tr>
-        <tr><td class="num">3380</td><td>16 主循环</td><td>requestAnimationFrame、慢放与顿帧、自适应倍率、连击 hook</td></tr>
-        <tr><td class="num">3460</td><td>17 UI 逻辑</td><td>界面切换、选关卡、结算、按钮绑定</td></tr>
-        <tr><td class="num">3630</td><td>18 启动</td><td>初始飘带位置、<code>window.__DI</code> 调试出口</td></tr>
+        <tr><td>角色</td><td>HP 100、移速 255、半径 15；受伤无敌 0.72 秒；闪避 0.17 秒 / 980 px/s / 冷却 1.05 秒</td></tr>
+        <tr><td>普攻</td><td>间隔 0.30 秒；伤害 13 / 13 / 22；射程 118 / 118 / 132；纵向容错 1.22；锁定 330 px</td></tr>
+        <tr><td>Z</td><td>R148、42 伤、击退 420；加速 ×1.5 持续 2 秒；冷却 5 秒</td></tr>
+        <tr><td>X</td><td>R178、78 伤；回血 20%；无敌 0.62 秒；冷却 8 秒</td></tr>
+        <tr><td>C</td><td>抓 5 只、抓取 R250、落点 R175；落点 58 伤；眩晕 2.2 秒（BOSS 0.8）；冷却 9 / 空抓 3.6 秒</td></tr>
+        <tr><td>V</td><td>怒气 100；2.8 秒；命中 64 / 40；普通最多 2 刀、BOSS 最多 8 刀；收尾 R230、72 伤</td></tr>
+        <tr><td>普通敌人基准</td><td>小鬼 34/9/152；胖魔 180/22/60；眼球怪 64/13/92；炸弹鬼 42/32/186；盾卫 230/17/54；巫妖 150/11/78</td></tr>
+        <tr><td>精英 / 巴尔</td><td>精英血 ×2.4、伤 ×1.35、速 ×1.05；巴尔实际伤害 30，当前第 5 关生命 3920，阶段阈值 62% / 30%</td></tr>
+        <tr><td>恢复 / 掉落</td><td>每 2 杀回 1%；清波 +3%；回血包 13% / +4%；怒气包 21% / +18</td></tr>
+        <tr><td>当前关卡缩放</td><td>血 1+0.40×(关−1)、伤 1+0.26×(关−1)、速 1+0.055×(关−1)；只适用于当前五关，不直接外推百关</td></tr>
       </tbody>
     </table></div>
-    <p><code>window.__DI</code> 暴露了 <code>G</code>、<code>player</code>、<code>LEVELS</code>、四个 <code>cast*</code>、<code>makeEnemy</code>、<code>startLevel</code> 等接口，可以在控制台直接造敌人、跳关、放技能做验证，不需要改源码。</p>
   </section>
 
   <section id="a2">
-    <h2><span class="n">A2</span>附录：数值速查</h2>
+    <h2><span class="n">A2</span>附录：重构差异清单</h2>
     <div class="tw"><table class="wide">
-      <thead><tr><th style="width:210px">项</th><th>值</th></tr></thead>
+      <thead><tr><th>系统</th><th>当前五关版</th><th>确认后的百关版</th></tr></thead>
       <tbody>
-        <tr><td>角色</td><td>HP 100、移速 255、半径 15；受伤无敌 0.72 s；闪避 0.17 s / 980 px/s / 冷却 1.05</td></tr>
-        <tr><td>普攻</td><td>冷却 0.30 s；伤害 13 / 13 / 22；射程 118 / 118 / 132；弧 1.5 rad；纵向容错 1.22；锁定 330 px</td></tr>
-        <tr><td>Z</td><td>0.46 s 演出、0.12 s 结算；R 148、42 伤、击退 420；加速 ×1.5 持续 2 s；冷却 5 s</td></tr>
-        <tr><td>X</td><td>0.42 s 跳跃、抬升 96；R 178、78 伤（30% 暴击）、击退 560；回血 20%；无敌 0.62 s；冷却 8 s</td></tr>
-        <tr><td>C</td><td>抓 5 只（250 px 内）、砸向威胁最高；投掷 36 + 4×数量；落点 R 175、58 伤；眩晕 2.2 s（Boss 0.8）；冷却 9 s / 3.6 s</td></tr>
-        <tr><td>V</td><td>怒气 100；2.8 s；滑行 1750 px/s；命中 64 / 40；普通 2 刀、Boss 8 刀；收尾 R 230、72 伤</td></tr>
-        <tr><td>敌人基准</td><td>小鬼 34/9/152；胖魔 180/22/60；眼球怪 64/13/92；炸弹鬼 42/32/186；盾卫 230/17/54；巫妖 150/11/78</td></tr>
-        <tr><td>精英</td><td>血 ×2.4、伤 ×1.35、速 ×1.05；第 2/3/4 关分别为胖魔 / 眼球怪 / 巫妖</td></tr>
-        <tr><td>魔王</td><td>血 2800 ×（1 + 0.10×关）= 第 5 关 3920；半径 52；伤害 30；阶段 62% / 30%</td></tr>
-        <tr><td>掉落</td><td>13% 回血（+4%）、21% 怒气（+18）；存活 14 s；吸附 130 px；拾取 26 px</td></tr>
-        <tr><td>缩放</td><td>血 1+0.40×(关−1)、伤 1+0.26×(关−1)、速 1+0.055×(关−1)；出怪 0.42−0.05×关序，下限 0.16</td></tr>
-        <tr><td>节奏</td><td>开场 1.6 s、波间 1.9 s（回 3%）、精英前 1.6 s、魔王前 2.0 s</td></tr>
-        <tr><td>评分</td><td>星级 70% / 40% 血；评级 = 血×0.6 + 时间×0.4，S 0.85 / A 0.7 / B 0.5</td></tr>
+        <tr><td>主流程</td><td>标题 → 选关 / 战斗 → 完整结算 → 手动下一关</td><td>继续闯关 → 战斗 → 轻结算 → 强化暂停 → 自动下一关</td></tr>
+        <tr><td>关卡结构</td><td>5 个独立关卡</td><td>10 章 100 关，配置化波次与 20 场 BOSS</td></tr>
+        <tr><td>角色状态</td><td>每关完全重置</td><td>闯关继承，练习使用标准模板</td></tr>
+        <tr><td>成长</td><td>无</td><td>每关三选一，强化有叠层与互斥上限</td></tr>
+        <tr><td>失败</td><td>整关重开</td><td>从本关入口快照重试，可选显式辅助</td></tr>
+        <tr><td>评价</td><td>星级与字母评级分离</td><td>统一字母评级并映射星级</td></tr>
+        <tr><td>选关</td><td>直接进入所选关且重置角色</td><td>独立练习模式，不覆盖闯关进度</td></tr>
+        <tr><td>存档</td><td>解锁 / 星级 / 最佳时间</td><td>另存闯关快照、强化、设置与练习成绩，并容错迁移</td></tr>
+        <tr><td>双端</td><td>已有键盘与横屏触控</td><td>补齐强化、菜单、辅助、设置与完整百关的双端等价验收</td></tr>
+        <tr><td>性能</td><td>开局一次降档</td><td>持续监控、视觉迟滞降档、长局资源回收验证</td></tr>
       </tbody>
     </table></div>
   </section>
-
 </div>
-<footer>小豆豆的游戏广场 · 设计文档系列 · 本文以 <code>stickman.html</code> 当前实现为准，数值如有调整请同步更新本页。</footer>
+<footer>小豆豆的游戏广场 · 火柴人百关重构设计评审稿 · 当前线上游戏仍为五关版本，本文经确认后再进入开发。</footer>
 </main>
-
-</main>
-
 <script>
 (function(){
   var sidebar=document.getElementById('sidebar');
   var links=[].slice.call(sidebar.querySelectorAll('.nav-link'));
-  var secs=links.map(function(a){
-    return document.getElementById(a.getAttribute('href').slice(1));
-  }).filter(Boolean);
+  var secs=links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); }).filter(Boolean);
   if(!secs.length) return;
-
   var last=null, lockUntil=0;
-
   function mark(id){
     links.forEach(function(a){
       var on=a.getAttribute('href')==='#'+id;
@@ -668,25 +688,20 @@ body,section,#sidebar,.box,.day,.pill,.kpi,th,td,.theme-btn,.stage{
       if(on){ a.setAttribute('aria-current','true'); } else { a.removeAttribute('aria-current'); }
     });
   }
-
   function current(){
-    var line=window.innerHeight*0.28;
-    var cur=secs[0];
-    for(var i=0;i<secs.length;i++){
-      if(secs[i].getBoundingClientRect().top<=line) cur=secs[i];
-    }
+    var line=window.innerHeight*0.28, cur=secs[0];
+    for(var i=0;i<secs.length;i++){ if(secs[i].getBoundingClientRect().top<=line) cur=secs[i]; }
     var doc=document.documentElement;
     if(window.innerHeight+window.pageYOffset>=doc.scrollHeight-2) cur=secs[secs.length-1];
     return cur;
   }
-
   function sync(){
     if(Date.now()<lockUntil) return;
     var s=current();
     if(s===last) return;
     last=s; mark(s.id);
+    try{ history.replaceState(null,'','#'+s.id); }catch(e){}
   }
-
   var queued=false;
   function onScroll(){
     if(queued) return;
@@ -700,7 +715,6 @@ body,section,#sidebar,.box,.day,.pill,.kpi,th,td,.theme-btn,.stage{
     if(document.getElementById(id)){ last=null; mark(id); }
   });
   window.addEventListener('load',sync);
-
   links.forEach(function(a){
     a.addEventListener('click',function(){
       var id=a.getAttribute('href').slice(1);
@@ -717,18 +731,10 @@ body,section,#sidebar,.box,.day,.pill,.kpi,th,td,.theme-btn,.stage{
       }
     });
   });
-
   var initHash=location.hash.slice(1);
-  if(initHash && document.getElementById(initHash)){
-    last=document.getElementById(initHash);
-    mark(initHash);
-  } else {
-    sync();
-  }
-
-  /* 移动端抽屉 */
-  var mbtn=document.getElementById('mbtn');
-  var backdrop=document.getElementById('backdrop');
+  if(initHash && document.getElementById(initHash)){ last=document.getElementById(initHash); mark(initHash); }
+  else { sync(); }
+  var mbtn=document.getElementById('mbtn'), backdrop=document.getElementById('backdrop');
   mbtn.addEventListener('click',function(){
     var open=sidebar.classList.toggle('show');
     backdrop.classList.toggle('show',open);
@@ -736,25 +742,14 @@ body,section,#sidebar,.box,.day,.pill,.kpi,th,td,.theme-btn,.stage{
     mbtn.setAttribute('aria-expanded',open?'true':'false');
   });
   backdrop.addEventListener('click',function(){
-    sidebar.classList.remove('show');
-    backdrop.classList.remove('show');
-    document.body.classList.remove('nav-open');
-    mbtn.setAttribute('aria-expanded','false');
+    sidebar.classList.remove('show'); backdrop.classList.remove('show');
+    document.body.classList.remove('nav-open'); mbtn.setAttribute('aria-expanded','false');
   });
 })();
-
-[].slice.call(document.querySelectorAll('[data-role="theme"]')).forEach(function(btn){
-  btn.addEventListener('click',function(){
-    var p=window.__theme.getPref();
-    window.__theme.set(p==='auto'?'light':p==='light'?'dark':'auto');
-  });
+document.querySelector('[data-role="theme"]').addEventListener('click',function(){
+  var p=window.__theme.getPref();
+  window.__theme.set(p==='auto'?'light':p==='light'?'dark':'auto');
 });
 </script>
 </body>
 </html>
-
-
-
-
-
-
