@@ -19,6 +19,20 @@
 
 双击 `小豆豆游戏广场.html`。游戏在页面内的全屏舞台打开，顶栏常驻「返回广场」。
 
+## 在线试玩
+
+《火柴人勇闯恶魔岛》已通过 GitHub Pages 上线，浏览器打开即玩：
+
+<https://huayizhe.github.io/xiaodoudou-game-playground/>
+
+根路径访问的是 `index.html`，它由 `火柴人勇闯恶魔岛.html` 复制而来，仅作为 Pages 首页入口。修改游戏后需要重新复制一次：
+
+```powershell
+Copy-Item -LiteralPath ".\火柴人勇闯恶魔岛.html" -Destination ".\index.html" -Force
+```
+
+其他游戏也可通过中文文件名直接访问，例如 `.../小豆豆游戏广场.html`。
+
 ## 文档
 
 双击 `docs/index.html` 进入文档入口，再点开对应游戏。每份文档都是单文件 HTML，带左侧目录、深浅色切换，离线可看。
