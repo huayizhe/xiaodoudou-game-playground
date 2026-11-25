@@ -511,7 +511,7 @@
 
     <div class="vitals-slot">
       <div class="vitals">
-        <div class="bar hp"><div class="fill" id="hpFill"></div><span id="hpText">100 / 100</span></div>
+        <div class="bar hp"><div class="fill" id="hpFill"></div><span id="hpText">10 万 / 10 万</span></div>
         <div class="bar rage"><div class="fill" id="rageFill"></div><span id="rageText">怒气 0 / 100</span></div>
         <div class="keys-hint">WASD 移动 · 自动锁定最近敌人并普攻 · 空格 闪避</div>
       </div>
@@ -630,7 +630,7 @@
         <label class="setting-row"><span>左右布局镜像</span><input id="settingMirror" type="checkbox"></label>
       </div>
       <div class="save-note" id="saveNotice" role="status"></div>
-      <div class="build-tag" id="buildTag">版本 2026-11-25 · 闪避图标 / 音频独立开关</div>
+      <div class="build-tag" id="buildTag">版本 2026-11-25 · 生命 10 万 / 数值对齐</div>
       <button class="btn ghost" id="btnSettingsBack">返回</button>
     </section>
 
@@ -980,6 +980,8 @@ const AudioSys = {
 const SAVE_KEY = 'stickman_demon_isle_v1';
 const CAMPAIGN_KEY='stickman_demon_isle_v2';
 const DEFAULT_SETTINGS={sound:true,music:true,sfx:true,musicVol:.65,sfxVol:.9,shake:false,flash:false,touchSize:1,mirror:false};
+/* 生命放大层：玩家血量 ×1000（10 万起），敌人打人也同倍放大，血条比例与旧版一致。 */
+const HP_SCALE = 1000, BASE_HP = 100000, HP_UPGRADE = 10000, MAX_HP_CAP = 1000000;
 let save={version:2,unlocked:1,completed:false,practiceBest:{},campaignRun:null,settings:{...DEFAULT_SETTINGS}};
 let storageWarning='';
 try{
@@ -998,7 +1000,13 @@ function sanitizeRun(r){
   const core=r.core,upgrades={};
   for(const [id,n] of Object.entries(r.upgrades||{})){const u=UPGRADE_MAP[id];if(u&&Number.isInteger(n)&&n>0)upgrades[id]=Math.min(n,u.max);}
   const num=(v,d,min,max)=>Number.isFinite(v)?clamp(v,min,max):d;
-  return {version:2,level:r.level,core:{maxHp:num(core.maxHp,100,100,1000),hp:num(core.hp,100,0,num(core.maxHp,100,100,1000)),rage:num(core.rage,0,0,100),cooldowns:{z:num(core.cooldowns?.z,0,0,6),x:num(core.cooldowns?.x,0,0,9),c:num(core.cooldowns?.c,0,0,10)}},
+  // 旧存档 maxHp 仍是 100~1000，按 1000× 迁移到 10 万~100 万；新存档不再二次放大。
+  const rawMax=Number.isFinite(core.maxHp)?core.maxHp:100;
+  const legacy=rawMax<BASE_HP/10;
+  const maxHp=clamp(legacy?rawMax*HP_SCALE:rawMax,BASE_HP,MAX_HP_CAP);
+  const rawHp=Number.isFinite(core.hp)?core.hp:maxHp;
+  const hp=clamp(legacy?rawHp*HP_SCALE:rawHp,0,maxHp);
+  return {version:2,level:r.level,core:{maxHp,hp,rage:num(core.rage,0,0,100),cooldowns:{z:num(core.cooldowns?.z,0,0,6),x:num(core.cooldowns?.x,0,0,9),c:num(core.cooldowns?.c,0,0,10)}},
     upgrades,assist:r.assist==='hp20'||r.assist==='damage15'?r.assist:null,assistedLevels:{...(r.assistedLevels||{})},failures:{...(r.failures||{})},
     totals:{time:num(r.totals?.time,0,0,1e8),kills:num(r.totals?.kills,0,0,1e8),deaths:num(r.totals?.deaths,0,0,1e8),upgrades:num(r.totals?.upgrades,0,0,99)},
     results:{...(r.results||{})},chapterGuardUsed:{...(r.chapterGuardUsed||{})},completed:!!r.completed,entry:r.entry?sanitizeEntry(r.entry):null};
@@ -1010,12 +1018,12 @@ function persist(){
 }
 let run=null;
 function newRun(level){
-  return {version:2,level,core:{maxHp:100,hp:100,rage:0,cooldowns:{z:0,x:0,c:0}},upgrades:{},assist:null,assistedLevels:{},failures:{},totals:{time:0,kills:0,deaths:0,upgrades:0},results:{},chapterGuardUsed:{},completed:false,entry:null};
+  return {version:2,level,core:{maxHp:BASE_HP,hp:BASE_HP,rage:0,cooldowns:{z:0,x:0,c:0}},upgrades:{},assist:null,assistedLevels:{},failures:{},totals:{time:0,kills:0,deaths:0,upgrades:0},results:{},chapterGuardUsed:{},completed:false,entry:null};
 }
 function practiceRun(level){
   const r=newRun(level),tier=Math.floor((level-1)/10);
   for(const u of UPGRADES){if(u.min<=level&&!u.fallback&&!u.core)r.upgrades[u.id]=Math.min(u.max,Math.floor(tier/2));}
-  r.core.maxHp=100+tier*12;r.core.hp=r.core.maxHp;return r;
+  r.core.maxHp=BASE_HP+tier*(HP_UPGRADE*1.2);r.core.hp=r.core.maxHp;return r;
 }
 function copyData(v){return JSON.parse(JSON.stringify(v));}
 function captureRunSnapshot(){
@@ -1206,7 +1214,7 @@ function drawRibbonPath(pts, baseW, glow){
    6. 关卡 / 敌人数据
    ========================================================= */
 /* 数值放大层：伤害与敌人生命统一乘 DMG_SCALE，前期暴击就能看到三位数起步，
-   随关号与强化继续涨到万级。玩家生命、敌人打人的伤害都不放大，保证血条比例不变。 */
+   随关号与强化继续涨到万级。玩家生命与敌人打人伤害走独立的 HP_SCALE 层（1000×）。 */
 const DMG_SCALE = 48;
 const HP_GROWTH = 0.045;
 function levelPower(){ return 1 + 0.09 * (G.levelIndex || 0); }
@@ -1351,8 +1359,8 @@ const UPGRADES=[
   {id:'vFinish',school:'V · 无影',name:'终式扩张',text:'无影斩收尾范围 +15%。',max:3,min:5},
   {id:'vBoss',school:'V · 无影',name:'破军终击',text:'收尾命中 BOSS 时伤害 +20%，并短暂破防。',max:3,min:10,core:true},
   {id:'dodgeRage',school:'闪避 · 生存',name:'临危回气',text:'完美闪避恢复 6 点怒气。',max:3,min:3},
-  {id:'maxHp',school:'闪避 · 生存',name:'强韧体魄',text:'最大生命 +10，并恢复相同生命。',max:8,min:1,core:true},
-  {id:'guardian',school:'闪避 · 生存',name:'一线生机',text:'每章首次致命伤保留 1 点生命。',max:1,min:5,core:true},
+  {id:'maxHp',school:'闪避 · 生存',name:'强韧体魄',text:'最大生命 +10,000，并恢复相同生命。',max:8,min:1,core:true},
+  {id:'guardian',school:'闪避 · 生存',name:'一线生机',text:'每章首次致命伤保留 1% 最大生命。',max:1,min:5,core:true},
   {id:'dmgAll',school:'战意 · 成长',name:'剑意',text:'所有伤害 +15%。',max:10,min:1,core:true},
   {id:'critRate',school:'战意 · 成长',name:'杀意',text:'暴击率 +5%。',max:8,min:3},
   {id:'critDmg',school:'战意 · 成长',name:'破军',text:'暴击伤害 +25%。',max:6,min:5},
@@ -1427,7 +1435,7 @@ const G = {
 
 const player = {
   x: W/2, y: H/2, vx:0, vy:0, r:15,
-  hp:100, maxHp:100, speed:255,
+  hp:BASE_HP, maxHp:BASE_HP, speed:255,
   aim:0, face:1, walk:0, moving:false,
   attackCd:0, attackAnim:0, attackDur:0.2, comboIdx:0,
   dashT:0, dashCd:0, dashDirX:0, dashDirY:0,
@@ -1447,7 +1455,7 @@ const ribbon = new Ribbon(20, 8.5);
 
 function resetPlayer(){
   Object.assign(player, {
-    x: W/2, y: H*0.62, vx:0, vy:0, hp:100, maxHp:100,
+    x: W/2, y: H*0.62, vx:0, vy:0, hp:BASE_HP, maxHp:BASE_HP,
     aim:0, face:1, walk:0, moving:false, attackCd:0, attackAnim:0, comboIdx:0,
     dashT:0, dashCd:player.dashCd||0, invuln:2, hurtT:0, dead:false,
     spdBuffT:0, zT:0, zHit:false, cT:0, cHit:false,
@@ -1547,7 +1555,7 @@ function healPlayer(pct, label){
   const amount = Math.round(player.maxHp * pct * (MODS.healBoost||1));
   player.hp = clamp(player.hp + amount, 0, player.maxHp);
   G.stats.healed += amount;
-  if(label !== false) addFloat(player.x, player.y-92, '+'+amount, '#7dffa8', 20, -60);
+  if(label !== false) addFloat(player.x, player.y-92, '+'+fmtDmg(amount), '#7dffa8', 20, -60);
   burst(player.x, player.y-50, 8, ['#7dffa8','#b8ffcf'], 130, 3);
 }
 function addCombo(){
@@ -1556,6 +1564,11 @@ function addCombo(){
 
 function fmtDmg(n){
   if(n>=10000){ const w=n/10000; return (Math.round(w*10)/10).toString().replace(/\.0$/,'')+'万'; }
+  return String(n);
+}
+function fmtHp(n){
+  n=Math.max(0,Math.round(n));
+  if(n>=10000){ const w=n/10000; return (Math.round(w*10)/10).toString().replace(/\.0$/,'')+' 万'; }
   return String(n);
 }
 function hitEnemy(e, dmg, opts){
@@ -1636,12 +1649,13 @@ function hurtPlayer(dmg, sx, sy){
     return;
   }
   if(G.state !== 'playing'||G.outcome) return;
-  if(dmg>=15)for(const e of G.enemies){if(!e.dead&&e.affixes?.includes('leech'))e.hp=Math.min(e.maxHp,e.hp+e.maxHp*.025);}
+  if(dmg>=15*HP_SCALE)for(const e of G.enemies){if(!e.dead&&e.affixes?.includes('leech'))e.hp=Math.min(e.maxHp,e.hp+e.maxHp*.025);}
+  dmg *= HP_SCALE;
   if(player.spdBuffT>0)dmg*=1-MODS.zGuard;
   if(MODS.armor)dmg*=1-MODS.armor;
   if(run&&run.assist==='damage15')dmg*=.85;
   if(run&&MODS.guardian&&!run.chapterGuardUsed[G.level.chapter]&&player.hp-dmg<=0){
-    run.chapterGuardUsed[G.level.chapter]=true;player.hp=1;player.invuln=1.5;addFloat(player.x,player.y-100,'一线生机','#ffd166',22);return;
+    run.chapterGuardUsed[G.level.chapter]=true;player.hp=Math.max(1,Math.round(player.maxHp*.01));player.invuln=1.5;addFloat(player.x,player.y-100,'一线生机','#ffd166',22);return;
   }
   player.hp -= dmg;
   player.invuln = 0.55;
@@ -1649,10 +1663,10 @@ function hurtPlayer(dmg, sx, sy){
   G.stats.dmgTaken += dmg;
   G.shake = Math.max(G.shake, 3.5);
   G.flash = 0.28;
-  addFloat(player.x, player.y - 96, '-'+Math.round(dmg), '#ff4d4d', 22);
+  addFloat(player.x, player.y - 96, '-'+fmtDmg(Math.round(dmg)), '#ff4d4d', 22);
   burst(player.x, player.y - 50, 12, ['#ff2d2d','#ff8a5a'], 220, 4);
   AudioSys.sfx('hurt');
-  gainRage(dmg * 0.3);
+  gainRage(dmg / HP_SCALE * 0.3);
   // 击退
   const a = Math.atan2(player.y - sy, player.x - sx);
   player.vx += Math.cos(a) * 260;
@@ -2748,7 +2762,7 @@ function startLevel(idx,options){
   if(options.mode)G.mode=options.mode;
   if(options.retry&&G.entrySnapshot){const failures=copyData(run.failures),deaths=run.totals.deaths;run=copyData(G.entrySnapshot);run.failures=failures;run.totals.deaths=deaths;}
   if(!run||run.level!==idx+1)run=G.mode==='practice'?practiceRun(idx+1):newRun(idx+1);
-  if(run.assist==='hp20'&&run.core.maxHp<120){run.core.maxHp=120;run.core.hp=Math.min(run.core.hp+20,120);}
+  if(run.assist==='hp20'&&run.core.maxHp<BASE_HP*1.2){run.core.maxHp=BASE_HP*1.2;run.core.hp=Math.min(run.core.hp+BASE_HP*.2,BASE_HP*1.2);}
   if(G.mode==='practice')run.totals.kills=0;
   rebuildMods();G.levelIndex=idx;G.level=LEVELS[idx];G.state='playing';G.time=0;G.gameTime=0;G.fieldTime=0;
   G.waveIdx=-1;G.phase='transition';G.timer=2;G.spawnQueue=[];G.spawnT=0;G.pending=0;
@@ -2884,7 +2898,7 @@ function victory(){
 }
 function showSummary(){
   const s=G.summary,card=el('summaryCard');
-  card.innerHTML='<div class="rank">'+s.rank+'</div><b>第 '+run.level+' 关完成</b><span>'+fmtTime(s.time)+' · 剩余 '+Math.ceil(s.hp)+' / '+s.maxHp+' · '+'★'.repeat(s.stars)+'</span>'+(run.assistedLevels[run.level]?'<span>本关使用辅助</span>':'');
+  card.innerHTML='<div class="rank">'+s.rank+'</div><b>第 '+run.level+' 关完成</b><span>'+fmtTime(s.time)+' · 剩余 '+fmtHp(s.hp)+' / '+fmtHp(s.maxHp)+' · '+'★'.repeat(s.stars)+'</span>'+(run.assistedLevels[run.level]?'<span>本关使用辅助</span>':'');
   card.classList.remove('hidden');
 }
 function finishSummary(){
@@ -2900,7 +2914,7 @@ function finishSummary(){
 function openUpgrade(){
   if(G.state!=='playing')return;
   G.phase='upgrade';G.upgradeChoices=getUpgradeChoices();G.upgradeFocus=0;clearInput();
-  el('upgradeSub').textContent='第 '+run.level+' 关完成 · 恢复 '+G.summary.recover+' 生命 · 不限时';
+  el('upgradeSub').textContent='第 '+run.level+' 关完成 · 恢复 '+fmtHp(G.summary.recover)+' 生命 · 不限时';
   const grid=el('upgradeGrid');grid.innerHTML='';
   G.upgradeChoices.forEach((u,i)=>{
     const card=document.createElement('button');card.type='button';card.className='upgrade-card'+(i===0?' selected':'');card.dataset.index=i;
@@ -2918,7 +2932,7 @@ function chooseUpgrade(id){
   if(G.state!=='upgrade'||G.phase!=='upgrade')return;
   const u=G.upgradeChoices.find(x=>x.id===id);if(!u)return;
   run.upgrades[id]=(run.upgrades[id]||0)+1;run.totals.upgrades++;rebuildMods();
-  if(id==='maxHp'){run.core.maxHp+=10;run.core.hp+=10;}if(id==='fallbackHp'){const add=Math.round(run.core.maxHp*0.08);run.core.maxHp+=add;run.core.hp+=add;}
+  if(id==='maxHp'){run.core.maxHp+=HP_UPGRADE;run.core.hp+=HP_UPGRADE;}if(id==='fallbackHp'){const add=Math.round(run.core.maxHp*0.08);run.core.maxHp+=add;run.core.hp+=add;}
   if(id==='fallbackHeal')run.core.hp=Math.min(run.core.maxHp,run.core.hp+run.core.maxHp*.2);
   run.level++;run.assist=null;clearInput();AudioSys.sfx('heal');startLevel(run.level-1);
 }
@@ -3049,7 +3063,7 @@ function updateHud(){
   if((hudTick++ & 1) && G.state === 'playing') return;
   const hpPct = clamp(player.hp/player.maxHp, 0, 1);
   el('hpFill').style.transform = `scaleX(${hpPct.toFixed(3)})`;
-  setText('hpText', Math.ceil(player.hp) + ' / ' + player.maxHp);
+  setText('hpText', fmtHp(player.hp) + ' / ' + fmtHp(player.maxHp));
   const rp = clamp(player.rage/100, 0, 1);
   el('rageFill').style.transform = `scaleX(${rp.toFixed(3)})`;
   setText('rageText', '怒气 ' + Math.floor(player.rage) + ' / 100');
