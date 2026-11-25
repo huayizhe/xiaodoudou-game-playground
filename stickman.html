@@ -3337,6 +3337,13 @@ function drawEnemy(e){
 
   ctx.save();
   ctx.translate(x, y);
+  // 词缀文字画在翻转之前，否则怪朝左时名字会左右镜像
+  if(e.affixes?.length){
+    ctx.save();
+    ctx.fillStyle='#ffd166';ctx.font='12px sans-serif';ctx.textAlign='center';
+    ctx.fillText(e.affixes.map(a=>AFFIXES[a].name).join(' · '),0,-e.r-58);
+    ctx.restore();
+  }
   const dir = Math.cos(e.facing) >= 0 ? 1 : -1;
   ctx.scale(dir, 1);
 
@@ -3344,7 +3351,6 @@ function drawEnemy(e){
   const dark = shade(e.color, -70);
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  if(e.affixes?.length){ctx.fillStyle='#ffd166';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(e.affixes.map(a=>AFFIXES[a].name).join(' · '),0,-e.r-58);}
   if(e.breakT>0){ctx.strokeStyle='#ffd166';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-20,e.r+10,0,TAU);ctx.stroke();}
 
   // 眩晕星星
