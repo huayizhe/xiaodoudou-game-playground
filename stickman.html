@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#07060d">
 <title>火柴人勇闯恶魔岛</title>
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
@@ -215,6 +218,13 @@
   .skill.ready{border-color:rgba(255,120,90,.65);box-shadow:0 6px 20px rgba(0,0,0,.5),0 0 18px rgba(255,60,40,.28)}
   .skill.ult{border-color:rgba(200,80,255,.5)}
   .skill.ult.ready{border-color:rgba(255,80,220,.9);box-shadow:0 0 26px rgba(255,60,220,.5);animation:ultPulse 1.1s infinite}
+  /* 键鼠闪避：固定显示在技能条最左侧，空格冷却和触屏“闪”键同口径 */
+  .skill.dodge{width:52px;height:52px;border-radius:50%;border-color:rgba(120,220,255,.42);
+    background:linear-gradient(160deg,#142833,#0a111a);box-shadow:0 6px 18px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.13)}
+  .skill.dodge b{font-size:20px;color:#bdefff;text-shadow:0 0 14px rgba(90,210,255,.65)}
+  .skill.dodge i{font-size:8.5px;color:rgba(200,242,255,.78);letter-spacing:0}
+  .skill.dodge em{font-size:7.5px;color:rgba(200,242,255,.55)}
+  .skill.dodge .cd{font-size:13px}
   @keyframes ultPulse{0%,100%{box-shadow:0 0 14px rgba(255,60,220,.35)}50%{box-shadow:0 0 30px rgba(255,60,220,.75)}}
 
   /* 只做透明度过渡：缩放 + 大范围 text-shadow 会让浏览器每帧重新栅格化，造成释放技能瞬间卡一下 */
@@ -315,6 +325,8 @@
   body.touch-mode .skill{position:absolute;border-radius:50%;border-width:1px;
     display:grid;place-items:center;pointer-events:auto;touch-action:none;
     transition:transform .08s ease,border-color .12s,box-shadow .12s}
+  /* 键鼠闪避图标不能出现在触屏技能簇里，移动端保留独立“闪”键 */
+  body.touch-mode .skill.dodge.kbd-only{display:none}
   body.touch-mode .skill b{font-size:22px;line-height:1}
   body.touch-mode .skill i,body.touch-mode .skill em{display:none}
   body.touch-mode .skill-row em{display:none}
@@ -447,6 +459,9 @@
   .setting-row{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:54px;padding:10px 16px;background:rgba(20,13,28,.9);border:1px solid rgba(255,255,255,.14);border-radius:7px;text-align:left}
   .setting-row select,.setting-row input{font:inherit;min-height:38px;max-width:180px;background:#211427;color:var(--bone);border:1px solid rgba(255,255,255,.22);border-radius:5px;padding:4px 8px}
   .setting-row input[type=checkbox]{width:24px;height:24px;accent-color:#ff6347}
+  .setting-row input[type=range]{width:170px;height:26px;min-height:26px;padding:0;border:none;background:transparent;accent-color:#ff6347;cursor:pointer}
+  .setting-row.setting-range span{color:rgba(243,237,224,.82)}
+  .build-tag{font-size:11px;letter-spacing:.04em;color:rgba(243,237,224,.42);text-align:center;margin:-8px 0 14px}
   .save-note{min-height:24px;color:#ffc78f;text-align:center;font-size:13px;margin:6px}
   .mode-tag{font-size:12px;color:#ffc78f;margin-top:3px}
   #screen-result .modal,#screen-pause .modal{max-height:96%;overflow:auto}
@@ -516,6 +531,7 @@
       <div class="skill" data-skill="x"><div class="cd" id="cdX"></div><b>跃</b><i>X</i><em>裂地跃斩</em></div>
       <div class="skill" data-skill="c"><div class="cd" id="cdC"></div><b>投</b><i>C</i><em>裂空投</em></div>
       <div class="skill ult" data-skill="v"><div class="cd" id="cdV"></div><b>斩</b><i>V</i><em>无影斩</em></div>
+      <div class="skill dodge kbd-only" data-skill="dodge"><div class="cd" id="cdDodgeKb"></div><b>闪</b><i>SPACE</i><em>闪避</em></div>
       <button class="tbtn" id="btnDodge" aria-label="闪避"><b>闪</b><span class="tcd" id="cdDodge"></span></button>
     </div>
 
@@ -603,13 +619,18 @@
     <section class="screen" id="screen-settings">
       <h2>设置</h2>
       <div class="settings-grid">
-        <label class="setting-row"><span>声音</span><input id="settingSound" type="checkbox"></label>
+        <label class="setting-row"><span>总声音</span><input id="settingSound" type="checkbox"></label>
+        <label class="setting-row"><span>背景音乐</span><input id="settingMusic" type="checkbox"></label>
+        <label class="setting-row setting-range"><span>音乐音量</span><input id="settingMusicVol" type="range" min="0" max="100" step="1"></label>
+        <label class="setting-row"><span>战斗音效</span><input id="settingSfx" type="checkbox"></label>
+        <label class="setting-row setting-range"><span>音效音量</span><input id="settingSfxVol" type="range" min="0" max="100" step="1"></label>
         <label class="setting-row"><span>减弱震屏</span><input id="settingShake" type="checkbox"></label>
         <label class="setting-row"><span>减弱全屏闪烁</span><input id="settingFlash" type="checkbox"></label>
         <label class="setting-row"><span>触控按钮尺寸</span><select id="settingSize"><option value="0.9">90%</option><option value="1">100%</option><option value="1.15">115%</option></select></label>
         <label class="setting-row"><span>左右布局镜像</span><input id="settingMirror" type="checkbox"></label>
       </div>
       <div class="save-note" id="saveNotice" role="status"></div>
+      <div class="build-tag" id="buildTag">版本 2026-11-25 · 闪避图标 / 音频独立开关</div>
       <button class="btn ghost" id="btnSettingsBack">返回</button>
     </section>
 
@@ -734,7 +755,9 @@ const ARENA = { l: 46, r: W-46, t: 46, b: H-46 };
    2. 音频（全程序化生成，无外部素材）
    ========================================================= */
 const AudioSys = {
-  ctx:null, master:null, muted:false, musicOn:false, timer:null, step:0, nextT:0,
+  ctx:null, master:null, musicGain:null, sfxGain:null, muted:false,
+  musicEnabled:true, sfxEnabled:true, musicVol:.65, sfxVol:.9,
+  musicOn:false, timer:null, step:0, nextT:0,
   init(){
     if(this.ctx) { if(this.ctx.state==='suspended') this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -743,16 +766,49 @@ const AudioSys = {
       this.ctx = new AC();
       this.master = this.ctx.createGain();
       this.master.gain.value = this.muted ? 0 : 0.55;
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.value = this.musicEnabled ? this.musicVol : 0;
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.value = this.sfxEnabled ? this.sfxVol : 0;
+      this.musicGain.connect(this.master);
+      this.sfxGain.connect(this.master);
       this.master.connect(this.ctx.destination);
       this.startMusic();
     }catch(err){ this.ctx = null; }
   },
+  updateBuses(){
+    if(!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.master.gain.setTargetAtTime(this.muted?0:0.55, t, 0.05);
+    if(this.musicGain) this.musicGain.gain.setTargetAtTime(this.musicEnabled?this.musicVol:0, t, 0.05);
+    if(this.sfxGain) this.sfxGain.gain.setTargetAtTime(this.sfxEnabled?this.sfxVol:0, t, 0.05);
+  },
   setMuted(m){
     this.muted = m;
-    if(this.master) this.master.gain.setTargetAtTime(m?0:0.55, this.ctx.currentTime, 0.05);
+    this.updateBuses();
+  },
+  setMusicEnabled(on){
+    this.musicEnabled = !!on;
+    this.updateBuses();
+    if(this.musicEnabled) this.startMusic();
+    else this.stopMusic();
+  },
+  setSfxEnabled(on){
+    this.sfxEnabled = !!on;
+    this.updateBuses();
+  },
+  setMusicVol(v){
+    this.musicVol = clamp(Number(v)||0, 0, 1);
+    this.updateBuses();
+    if(this.musicVol > 0 && this.musicEnabled) this.startMusic();
+  },
+  setSfxVol(v){
+    this.sfxVol = clamp(Number(v)||0, 0, 1);
+    this.updateBuses();
   },
   tone(o){
     if(!this.ctx || this.muted) return;
+    if(o.music ? !this.musicEnabled : !this.sfxEnabled) return;
     const c=this.ctx, t=c.currentTime + (o.delay||0);
     const osc=c.createOscillator(), g=c.createGain();
     osc.type = o.type||'sine';
@@ -762,11 +818,12 @@ const AudioSys = {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(v, t+(o.atk||0.005));
     g.gain.exponentialRampToValueAtTime(0.0001, t+(o.dur||0.1));
-    osc.connect(g); g.connect(this.master);
+    osc.connect(g); g.connect(o.music?this.musicGain:this.sfxGain);
     osc.start(t); osc.stop(t+(o.dur||0.1)+0.03);
   },
   noise(o){
     if(!this.ctx || this.muted) return;
+    if(o.music ? !this.musicEnabled : !this.sfxEnabled) return;
     const c=this.ctx, t=c.currentTime + (o.delay||0);
     const len = Math.floor(c.sampleRate * (o.dur||0.15));
     const buf = c.createBuffer(1, len, c.sampleRate);
@@ -780,11 +837,11 @@ const AudioSys = {
     const g = c.createGain();
     g.gain.setValueAtTime(o.vol||0.2, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t+(o.dur||0.15));
-    src.connect(f); f.connect(g); g.connect(this.master);
+    src.connect(f); f.connect(g); g.connect(o.music?this.musicGain:this.sfxGain);
     src.start(t);
   },
   sfx(name, arg){
-    if(!this.ctx) return;
+    if(!this.ctx || !this.sfxEnabled) return;
     // 浏览器切后台、自动播放策略或首次手势前，AudioContext 可能处于 suspended；
     // 每次触发都尝试恢复，避免“画面在打、音效全哑”。
     if(this.ctx.state==='suspended') this.ctx.resume().catch(()=>{});
@@ -876,33 +933,33 @@ const AudioSys = {
     }
   },
   startMusic(){
-    if(this.musicOn || !this.ctx) return;
+    if(this.musicOn || !this.ctx || !this.musicEnabled) return;
     this.musicOn = true;
     this.nextT = this.ctx.currentTime + 0.1;
     this.step = 0;
     const scale = [0,3,5,7,10]; // 小调五声
     const tick = ()=>{
-      if(!this.ctx) return;
+      if(!this.ctx || !this.musicEnabled){ this.musicOn=false; this.timer=null; return; }
       while(this.nextT < this.ctx.currentTime + 0.25){
         const s = this.step % 32;
         const t = this.nextT;
         // 底鼓
-        if(s % 8 === 0) this.tone({type:'sine', f0:130, f1:44, dur:.22, vol:.22, delay:t-this.ctx.currentTime});
+        if(s % 8 === 0) this.tone({type:'sine', f0:130, f1:44, dur:.22, vol:.22, delay:t-this.ctx.currentTime, music:true});
         // 军鼓感
-        if(s % 16 === 8) this.noise({dur:.12, f0:1800, f1:500, vol:.08, delay:t-this.ctx.currentTime});
+        if(s % 16 === 8) this.noise({dur:.12, f0:1800, f1:500, vol:.08, delay:t-this.ctx.currentTime, music:true});
         // 踩镲
-        if(s % 4 === 2) this.noise({dur:.05, f0:6000, f1:8000, vol:.035, delay:t-this.ctx.currentTime});
+        if(s % 4 === 2) this.noise({dur:.05, f0:6000, f1:8000, vol:.035, delay:t-this.ctx.currentTime, music:true});
         // 贝斯
         if(s % 2 === 0){
           const n = scale[(s/2)%scale.length];
           const f = 55 * Math.pow(2, n/12);
-          this.tone({type:'triangle', f0:f, f1:f, dur:.24, vol:.075, delay:t-this.ctx.currentTime});
+          this.tone({type:'triangle', f0:f, f1:f, dur:.24, vol:.075, delay:t-this.ctx.currentTime, music:true});
         }
         // 旋律
         if(s % 4 === 0 && Math.random() < 0.55){
           const n = scale[randi(0,4)] + 12;
           const f = 220 * Math.pow(2, n/12);
-          this.tone({type:'sine', f0:f, f1:f*1.005, dur:.5, vol:.035, delay:t-this.ctx.currentTime});
+          this.tone({type:'sine', f0:f, f1:f*1.005, dur:.5, vol:.035, delay:t-this.ctx.currentTime, music:true});
         }
         this.nextT += 0.125;
         this.step++;
@@ -910,6 +967,10 @@ const AudioSys = {
       this.timer = setTimeout(tick, 60);
     };
     tick();
+  },
+  stopMusic(){
+    if(this.timer){ clearTimeout(this.timer); this.timer = null; }
+    this.musicOn = false;
   }
 };
 
@@ -918,7 +979,7 @@ const AudioSys = {
    ========================================================= */
 const SAVE_KEY = 'stickman_demon_isle_v1';
 const CAMPAIGN_KEY='stickman_demon_isle_v2';
-const DEFAULT_SETTINGS={sound:true,shake:false,flash:false,touchSize:1,mirror:false};
+const DEFAULT_SETTINGS={sound:true,music:true,sfx:true,musicVol:.65,sfxVol:.9,shake:false,flash:false,touchSize:1,mirror:false};
 let save={version:2,unlocked:1,completed:false,practiceBest:{},campaignRun:null,settings:{...DEFAULT_SETTINGS}};
 let storageWarning='';
 try{
@@ -2957,6 +3018,8 @@ function drawField(){
    ========================================================= */
 const el = id => document.getElementById(id);
 const skillEls = { z: el('cdZ'), x: el('cdX'), c: el('cdC'), v: el('cdV') };
+const dodgeKbEl = document.querySelector('.skill.dodge.kbd-only');
+const dodgeKbCdEl = el('cdDodgeKb');
 const skillBoxes = {};
 document.querySelectorAll('.skill').forEach(b=>{ skillBoxes[b.dataset.skill] = b; });
 
@@ -2966,6 +3029,21 @@ function updateHudStatic(){
 let hudTick = 0;
 const hudCache = {};
 function setText(id, v){ if(hudCache[id] !== v){ hudCache[id] = v; el(id).textContent = v; } }
+function paintDodgeCd(node, box){
+  if(!node || !box) return;
+  const cd = player.dashCd, max = 1.30;
+  if(cd > 0){
+    const p = clamp(cd / max, 0, 1);
+    const bg = `conic-gradient(rgba(4,2,8,.84) ${(p*360).toFixed(1)}deg, transparent 0deg)`;
+    if(node.__bg !== bg){ node.__bg = bg; node.style.background = bg; }
+    setText2(node, cd >= 1 ? Math.ceil(cd) : cd.toFixed(1));
+    box.classList.add('cooling');
+  } else {
+    if(node.__bg !== 'none'){ node.__bg = 'none'; node.style.background = 'none'; }
+    setText2(node, '');
+    box.classList.remove('cooling');
+  }
+}
 function updateHud(){
   // HUD 以 30Hz 刷新，减少每帧 DOM 写入造成的掉帧
   if((hudTick++ & 1) && G.state === 'playing') return;
@@ -3016,21 +3094,9 @@ function updateHud(){
     skillBoxes.v.classList.add('cooling');
   }
 
-  // 闪避冷却（只有触屏按钮需要显示，键鼠下这块 DOM 是隐藏的）
-  if(IS_TOUCH && dodgeCdEl){
-    const cd = player.dashCd, max = 1.30;
-    if(cd > 0){
-      const p = cd / max;
-      const bg = `conic-gradient(rgba(4,2,8,.84) ${(p*360).toFixed(1)}deg, transparent 0deg)`;
-      if(dodgeCdEl.__bg !== bg){ dodgeCdEl.__bg = bg; dodgeCdEl.style.background = bg; }
-      setText2(dodgeCdEl, cd >= 1 ? Math.ceil(cd) : cd.toFixed(1));
-      dodgeEl.classList.add('cooling');
-    } else {
-      if(dodgeCdEl.__bg !== 'none'){ dodgeCdEl.__bg = 'none'; dodgeCdEl.style.background = 'none'; }
-      setText2(dodgeCdEl, '');
-      dodgeEl.classList.remove('cooling');
-    }
-  }
+  // 闪避冷却：触屏“闪”键与键鼠右下角“闪”图标共用同一套口径
+  if(IS_TOUCH && dodgeCdEl) paintDodgeCd(dodgeCdEl, dodgeEl);
+  if(dodgeKbCdEl) paintDodgeCd(dodgeKbCdEl, dodgeKbEl);
 
   // 连击
   const cb = el('comboBox');
@@ -4327,10 +4393,26 @@ function buildLevelGrid(){
 }
 function applySettings(){
   const s=save.settings;
-  el('settingSound').checked=s.sound!==false;el('settingShake').checked=!!s.shake;el('settingFlash').checked=!!s.flash;
+  const musicOn=s.music!==false, sfxOn=s.sfx!==false;
+  const mvNum=Number(s.musicVol), svNum=Number(s.sfxVol);
+  const musicVol=Number.isFinite(mvNum)?clamp(mvNum,0,1):0.65;
+  const sfxVol=Number.isFinite(svNum)?clamp(svNum,0,1):0.9;
+  el('settingSound').checked=s.sound!==false;
+  el('settingMusic').checked=musicOn;
+  el('settingMusicVol').value=String(Math.round(musicVol*100));
+  el('settingSfx').checked=sfxOn;
+  el('settingSfxVol').value=String(Math.round(sfxVol*100));
+  el('settingShake').checked=!!s.shake;el('settingFlash').checked=!!s.flash;
   el('settingSize').value=String(s.touchSize||1);el('settingMirror').checked=!!s.mirror;
   document.body.classList.toggle('reduce-motion',!!s.shake);document.body.classList.toggle('mirror-touch',!!s.mirror);
-  if(typeof AudioSys!=='undefined'){AudioSys.setMuted(s.sound===false);el('btnMute').textContent=AudioSys.muted?'×':'♪';el('btnMute').style.opacity=AudioSys.muted?.5:1;}
+  if(typeof AudioSys!=='undefined'){
+    AudioSys.setMuted(s.sound===false);
+    AudioSys.setMusicEnabled(musicOn);
+    AudioSys.setSfxEnabled(sfxOn);
+    AudioSys.setMusicVol(musicVol);
+    AudioSys.setSfxVol(sfxVol);
+    el('btnMute').textContent=AudioSys.muted?'×':'♪';el('btnMute').style.opacity=AudioSys.muted?.5:1;
+  }
 }
 function goTitle(){
   clearInput();clearBattleTasks();G.phase='idle';setState('title');showScreen('title');refreshTitle();
@@ -4431,9 +4513,21 @@ el('btnBackTitle').addEventListener('click',goTitle);
 el('btnSettings').addEventListener('click',()=>openSettings(false));
 el('btnSettingsBack').addEventListener('click',closeSettings);
 el('btnPauseSettings').addEventListener('click',()=>openSettings(true));
-for(const [id,key,kind] of [['settingSound','sound','check'],['settingShake','shake','check'],['settingFlash','flash','check'],['settingSize','touchSize','number'],['settingMirror','mirror','check']]){
+for(const [id,key,kind] of [['settingSound','sound','check'],['settingMusic','music','check'],['settingSfx','sfx','check'],['settingShake','shake','check'],['settingFlash','flash','check'],['settingSize','touchSize','number'],['settingMirror','mirror','check']]){
   el(id).addEventListener('change',e=>{save.settings[key]=kind==='check'?e.target.checked:kind==='number'?Number(e.target.value):e.target.value;applySettings();persist();layoutTouch();});
 }
+function bindVolume(id,key,setter){
+  const node=el(id);
+  node.addEventListener('input',()=>{
+    const v=Number(node.value)/100;
+    save.settings[key]=v;
+    AudioSys.init();
+    setter(v);
+  });
+  node.addEventListener('change',()=>{save.settings[key]=Number(node.value)/100;persist();});
+}
+bindVolume('settingMusicVol','musicVol',v=>AudioSys.setMusicVol(v));
+bindVolume('settingSfxVol','sfxVol',v=>AudioSys.setSfxVol(v));
 el('btnResume').addEventListener('click', resumeGame);
 el('btnRestart').addEventListener('click', ()=>{
   AudioSys.sfx('ui');retryLevel();
@@ -4588,6 +4682,12 @@ function enterMobileDisplay(){
   }catch(_){}
 }
 
+if(dodgeKbEl){
+  dodgeKbEl.addEventListener('pointerdown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    if(G.state==='playing') dodge();
+  });
+}
 if(IS_TOUCH){
   // 摇杆：按下定基准点（同一颗底盘，跟手不漂移），抬手/失焦一律归零
   stickEl.addEventListener('pointerdown', e=>{
@@ -4636,7 +4736,7 @@ if(IS_TOUCH){
    ========================================================= */
 ribbon.reset(W*0.72, H*0.80-103);
 window.__DI = { G, player, LEVELS, CHAPTERS, BOSSES, UPGRADES, UPGRADE_MAP, CONTENT_ERRORS, spawnEnemy, makeEnemy, startLevel, spawnBoss, ENEMY_TYPES, AudioSys,
-  castZ, castX, castC, castV, basicAttack, hurtPlayer, dodge, victory, defeat, beginVictory, beginDefeat,
+  castZ, castX, castC, castV, basicAttack, hurtPlayer, dodge, paintDodgeCd, victory, defeat, beginVictory, beginDefeat,
   chooseUpgrade, getUpgradeChoices, captureRunSnapshot, restoreRunSnapshot:s=>{run=copyData(s);syncCoreToPlayer();},retryLevel,rankResult,
   step(dt){G.gameTime+=dt;updateGameTasks();if(G.phase==='summary'){G.timer-=dt;if(G.timer<=0)finishSummary();}if(G.phase==='transition'){G.timer-=dt;player.invuln=Math.max(player.invuln,G.timer);for(const k of ['z','x','c'])player.skill[k].cd=Math.max(0,player.skill[k].cd-dt);if(G.timer<=0){G.phase='intermission';G.timer=.1;}}if(combatActive()){G.time+=dt;updatePlayer(dt);updateEnemies(dt);updateProjectiles(dt);updateField(dt);updateWaves(dt);}},
   getRun:()=>run,getSave:()=>save,
