@@ -571,13 +571,13 @@
           <div class="ctl-row kbd-only"><span class="key">M</span> 静音</div>
           <h3 style="margin-top:18px">生存法则</h3>
           <div class="ctl-row" style="color:rgba(243,237,224,.6);line-height:1.7">
-            每击杀 <b style="color:#ff8a6a">2</b> 只怪回复 <b style="color:#7dffa8">1%</b> 生命；命中与击杀积攒怒气，怒气满时可释放无影斩。
+            每击杀 <b style="color:#ff8a6a">4</b> 只怪回复 <b style="color:#7dffa8">1%</b> 生命；命中与击杀积攒怒气，怒气满时可释放无影斩。
           </div>
         </div>
         <div class="panel">
           <h3>技能</h3>
           <div class="skill-row"><div class="skill-ico">旋</div><div><b>旋风斩 <em>Z</em></b><p>以自身为中心横扫一周，对小范围内敌人造成伤害，随后 2 秒内移动速度 +50%。</p></div></div>
-          <div class="skill-row"><div class="skill-ico">跃</div><div><b>裂地跃斩 <em>X</em></b><p>朝锁定的敌人跃起（无目标则朝当前朝向），落地造成大范围伤害与击退，落地后回复 20% 最大生命。</p></div></div>
+          <div class="skill-row"><div class="skill-ico">跃</div><div><b>裂地跃斩 <em>X</em></b><p>朝锁定的敌人跃起（无目标则朝当前朝向），落地造成大范围伤害与击退；按命中数量回复 6%~14% 最大生命。</p></div></div>
           <div class="skill-row"><div class="skill-ico">投</div><div><b>裂空投 <em>C</em></b><p>抓起身边最近的 5 个单位，砸向威胁最高的怪物（并列取最近）。落点中等范围内的敌人受到伤害并眩晕 2.2 秒。</p></div></div>
           <div class="skill-row"><div class="skill-ico" style="background:linear-gradient(150deg,#3a1a4a,#180b22)">极</div><div><b>无影斩 <em>V</em></b><p>消耗全部怒气。化作残影滑行穿过敌人，顺势滑向下一个目标连续斩击，期间无敌，最后以剑气冲击波收尾。</p></div></div>
         </div>
@@ -783,8 +783,14 @@ const AudioSys = {
     src.connect(f); f.connect(g); g.connect(this.master);
     src.start(t);
   },
-  sfx(name){
+  sfx(name, arg){
     if(!this.ctx) return;
+    const now = this.ctx.currentTime;
+    // 多目标同时命中时只留第一声，避免同一帧叠十几层噪声听感糊掉
+    if(name==='hit'||name==='crit'){
+      if(now - (this.lastHitAt||-9) < 0.03) return;
+      this.lastHitAt = now;
+    }
     switch(name){
       case 'slash': this.noise({dur:.13, f0:2600, f1:700, vol:.16, q:.8}); break;
       case 'slash2': this.noise({dur:.1, f0:1800, f1:400, vol:.13, q:.7}); break;
@@ -793,7 +799,32 @@ const AudioSys = {
         this.noise({dur:.06, f0:900, vol:.1}); break;
       case 'crit':
         this.tone({type:'sawtooth', f0:320, f1:90, dur:.16, vol:.2});
-        this.noise({dur:.12, f0:2200, f1:300, vol:.18}); break;
+        this.noise({dur:.12, f0:2200, f1:300, vol:.18});
+        this.tone({type:'square', f0:1200, f1:520, dur:.06, vol:.1, delay:.01}); break;
+      case 'zImpact':
+        this.noise({dur:.34, f0:700, f1:2600, vol:.22, q:1.1});
+        this.tone({type:'triangle', f0:165, f1:58, dur:.3, vol:.2});
+        this.noise({dur:.15, f0:160, f1:70, vol:.18}); break;
+      case 'xImpact':
+        this.tone({type:'sine', f0:120, f1:34, dur:.34, vol:.32});
+        this.noise({dur:.3, f0:520, f1:90, vol:.26});
+        this.tone({type:'square', f0:210, f1:55, dur:.1, vol:.12}); break;
+      case 'cImpact':
+        this.noise({dur:.24, f0:3000, f1:220, vol:.26, q:1.5});
+        this.tone({type:'sawtooth', f0:190, f1:48, dur:.2, vol:.22});
+        this.tone({type:'sine', f0:76, f1:32, dur:.32, vol:.2, delay:.04}); break;
+      case 'ultcut': {
+        const n = arg||0;
+        const f = 3200 + Math.min(10,n) * 130;
+        this.noise({dur:.06, f0:f, f1:520, vol:.27, q:1.2});
+        this.tone({type:'square', f0:170+n*16, f1:58, dur:.06, vol:.18});
+        this.tone({type:'triangle', f0:760+n*40, f1:520, dur:.09, vol:.08, delay:.015});
+        break;
+      }
+      case 'ultFinish':
+        this.noise({dur:.5, f0:2600, f1:280, vol:.3, q:.8});
+        this.tone({type:'sine', f0:112, f1:30, dur:.5, vol:.34});
+        this.tone({type:'triangle', f0:440, f1:220, dur:.32, vol:.11, delay:.05}); break;
       case 'hurt':
         this.tone({type:'sawtooth', f0:260, f1:80, dur:.28, vol:.22});
         this.noise({dur:.2, f0:500, vol:.16}); break;
@@ -898,7 +929,7 @@ function sanitizeRun(r){
   const core=r.core,upgrades={};
   for(const [id,n] of Object.entries(r.upgrades||{})){const u=UPGRADE_MAP[id];if(u&&Number.isInteger(n)&&n>0)upgrades[id]=Math.min(n,u.max);}
   const num=(v,d,min,max)=>Number.isFinite(v)?clamp(v,min,max):d;
-  return {version:2,level:r.level,core:{maxHp:num(core.maxHp,100,100,1000),hp:num(core.hp,100,0,num(core.maxHp,100,100,1000)),rage:num(core.rage,0,0,100),cooldowns:{z:num(core.cooldowns?.z,0,0,5),x:num(core.cooldowns?.x,0,0,8),c:num(core.cooldowns?.c,0,0,9)}},
+  return {version:2,level:r.level,core:{maxHp:num(core.maxHp,100,100,1000),hp:num(core.hp,100,0,num(core.maxHp,100,100,1000)),rage:num(core.rage,0,0,100),cooldowns:{z:num(core.cooldowns?.z,0,0,6),x:num(core.cooldowns?.x,0,0,9),c:num(core.cooldowns?.c,0,0,10)}},
     upgrades,assist:r.assist==='hp20'||r.assist==='damage15'?r.assist:null,assistedLevels:{...(r.assistedLevels||{})},failures:{...(r.failures||{})},
     totals:{time:num(r.totals?.time,0,0,1e8),kills:num(r.totals?.kills,0,0,1e8),deaths:num(r.totals?.deaths,0,0,1e8),upgrades:num(r.totals?.upgrades,0,0,99)},
     results:{...(r.results||{})},chapterGuardUsed:{...(r.chapterGuardUsed||{})},completed:!!r.completed,entry:r.entry?sanitizeEntry(r.entry):null};
@@ -1102,6 +1133,19 @@ function drawRibbonPath(pts, baseW, glow){
 /* =========================================================
    6. 关卡 / 敌人数据
    ========================================================= */
+/* 数值放大层：伤害与敌人生命统一乘 DMG_SCALE，前期暴击就能看到三位数起步，
+   随关号与强化继续涨到万级。玩家生命、敌人打人的伤害都不放大，保证血条比例不变。 */
+const DMG_SCALE = 48;
+const HP_GROWTH = 0.045;
+function levelPower(){ return 1 + 0.09 * (G.levelIndex || 0); }
+function enemyHpScale(){
+  const lv = (G.levelIndex || 0) + 1;
+  return DMG_SCALE * levelPower() * (1 + HP_GROWTH * (lv - 1));
+}
+function bossHpScale(){
+  const lv = (G.levelIndex || 0) + 1;
+  return DMG_SCALE * (1 + 0.28 * (lv - 1));
+}
 const ENEMY_TYPES = {
   imp:    { hp:34,   dmg:9,  speed:152, r:16, color:'#ff6b4a', name:'小鬼', cost:1, first:1 },
   brute:  { hp:180,  dmg:22, speed:60,  r:28, color:'#b3261e', name:'胖魔', cost:3, first:2 },
@@ -1153,17 +1197,30 @@ const FIRST_WAVES=[
   [{imp:5,brute:1,spitter:1},{imp:4,brute:1,spitter:2,bomber:1}], [{imp:3,bomber:1,spitter:1}]
 ];
 function generatedWaves(n,ch,slot){
-  const c=CHAPTERS[ch], pool=c.pool.filter(t=>ENEMY_TYPES[t].first<=n);
+  const c=CHAPTERS[ch], pool=c.pool.filter(t=>ENEMY_TYPES[t].first<=n && t!=='imp');
   const waves=[];
-  const count=slot===1||slot===6?2:slot===8?3:2+(slot%4===0?1:0);
+  const bossSlot=slot===5||slot===10;
+  const count=bossSlot?2:(n<=3?2:slot===8?4:3);
   for(let w=0;w<count;w++){
-    const out={imp:Math.min(7,3+Math.floor(slot/3)+w)};
-    const t=slot===1&&w===0?pool[pool.length-1]:pool[(slot+w*2)%pool.length];
-    if(t!=='imp')out[t]=(out[t]||0)+(t==='shaman'||t==='void'?1:slot<4?1:2);
-    if(w>0&&pool.length>2){const t2=pool[(slot+w+2)%pool.length];if(t2!==t&&t2!=='imp')out[t2]=1;}
+    const imps=Math.min(12,3+Math.floor(slot/3)+w+(ch>=6?1:0));
+    const out={imp:imps};
+    const t=pool[(slot-1+w*2)%pool.length];
+    const heavy=t==='brute'||t==='shield'||t==='gale';
+    out[t]=heavy?(1+(ch>=2?1:0)):(t==='shaman'||t==='void'?1:1+(ch>=3?1:0));
+    if(w>0&&pool.length>2){const t2=pool[(slot-1+w+3)%pool.length];if(t2!==t&&t2!=='imp')out[t2]=out[t2]||1;}
     waves.push(out);
   }
+  // 新敌人必须在首次开放的那一关登场，避免被类型轮换“跳过”
+  const intro=c.pool.find(t=>ENEMY_TYPES[t].first===n);
+  if(slot===1&&intro&&waves[0]) waves[0][intro]=Math.max(1,waves[0][intro]||0);
   return waves;
+}
+function scaleWaves(waves,mult){
+  return waves.map(w=>{
+    const out={};
+    for(const t in w) out[t]=ENEMY_TYPES[t]?clamp(Math.round(w[t]*mult),1,12):w[t];
+    return out;
+  });
 }
 const LEVELS=[];
 for(let n=1;n<=100;n++){
@@ -1171,8 +1228,9 @@ for(let n=1;n<=100;n++){
   const major=slot===10,minor=slot===5,boss=major?BOSSES[n]:minor?BOSSES[n]:null;
   const affix=n>=81&&slot===9?['frenzy','guard']:n>=61?'leech':n>=41?'blast':n>=31?'guard':n>=21?'frenzy':null;
   LEVELS.push({id:n,chapter:ch+1,slot,name:c.name,sub:'第 '+n+' 关 · '+c.lesson,theme:c.theme,field:c.field,
-    par:boss?(major?125:78):45+slot*4,desc:c.lesson+'。'+ (boss?'击败 '+boss.name+'。':'保持走位，合理搭配技能。'),
-    waves:FIRST_WAVES[n-1]||generatedWaves(n,ch,slot),boss,elite:!boss&&slot===9?c.pool[Math.min(1,c.pool.length-1)]:null,affix});
+    par:boss?(major?150:95):55+slot*4+ch*3,desc:c.lesson+'。'+ (boss?'击败 '+boss.name+'。':'保持走位，合理搭配技能。'),
+    waves:FIRST_WAVES[n-1]?scaleWaves(FIRST_WAVES[n-1],n<=3?1.2:n<=5?1.4:1.6):generatedWaves(n,ch,slot),
+    boss,elite:!boss&&slot===9?c.pool[Math.min(1,c.pool.length-1)]:null,affix});
 }
 function validateContent(){
   const errors=[],seenBoss=new Set(),first={};
@@ -1204,12 +1262,22 @@ const UPGRADES=[
   {id:'cVulnerable',school:'C · 裂空投',name:'碎甲震荡',text:'被眩晕的敌人受到伤害 +10%。',max:3,min:5},
   {id:'vTargets',school:'V · 无影',name:'连环无影',text:'无影斩可额外斩击一个目标。',max:4,min:5},
   {id:'vFinish',school:'V · 无影',name:'终式扩张',text:'无影斩收尾范围 +15%。',max:3,min:5},
-  {id:'vBoss',school:'V · 无影',name:'破军终击',text:'收尾命中 BOSS 时额外造成 120 伤害并短暂破防。',max:3,min:10,core:true},
+  {id:'vBoss',school:'V · 无影',name:'破军终击',text:'收尾命中 BOSS 时伤害 +20%，并短暂破防。',max:3,min:10,core:true},
   {id:'dodgeRage',school:'闪避 · 生存',name:'临危回气',text:'完美闪避恢复 6 点怒气。',max:3,min:3},
   {id:'maxHp',school:'闪避 · 生存',name:'强韧体魄',text:'最大生命 +10，并恢复相同生命。',max:8,min:1,core:true},
   {id:'guardian',school:'闪避 · 生存',name:'一线生机',text:'每章首次致命伤保留 1 点生命。',max:1,min:5,core:true},
-  {id:'fallbackHp',school:'后备强化',name:'生命储备',text:'最大生命 +5，并恢复相同生命；作为后备项时可重复选择。',max:99,min:1,fallback:true},
-  {id:'fallbackHeal',school:'后备强化',name:'整备休息',text:'恢复 20% 最大生命。',max:99,min:1,fallback:true}
+  {id:'dmgAll',school:'战意 · 成长',name:'剑意',text:'所有伤害 +15%。',max:10,min:1,core:true},
+  {id:'critRate',school:'战意 · 成长',name:'杀意',text:'暴击率 +5%。',max:8,min:3},
+  {id:'critDmg',school:'战意 · 成长',name:'破军',text:'暴击伤害 +25%。',max:6,min:5},
+  {id:'atkSpeed',school:'战意 · 成长',name:'疾风',text:'普攻出手间隔 -7%。',max:6,min:3},
+  {id:'skillPower',school:'战意 · 成长',name:'术式',text:'技能伤害 +15%。',max:8,min:5},
+  {id:'moveSpeed',school:'战意 · 成长',name:'轻身',text:'移动速度 +5%。',max:4,min:7},
+  {id:'armor',school:'战意 · 成长',name:'铁骨',text:'受到伤害 -6%。',max:4,min:9},
+  {id:'healBoost',school:'战意 · 成长',name:'回春',text:'治疗效果 +15%。',max:4,min:7},
+  {id:'ultRefund',school:'V · 无影',name:'余烬',text:'无影斩结束时返还 20 点怒气。',max:1,min:40},
+  {id:'execute',school:'战意 · 成长',name:'斩尽',text:'对生命低于 30% 的敌人伤害 +25%。',max:2,min:30},
+  {id:'fallbackHp',school:'后备强化',name:'生命储备',text:'最大生命 +8%，并恢复相同生命。',max:5,min:1,fallback:true},
+  {id:'fallbackHeal',school:'后备强化',name:'整备休息',text:'恢复 20% 最大生命。',max:5,min:1,fallback:true}
 ];
 const UPGRADE_MAP=Object.fromEntries(UPGRADES.map(u=>[u.id,u]));
 let MODS={};
@@ -1219,18 +1287,37 @@ function rebuildMods(){
     zRange:1+.12*(u.zRange||0),zCooldown:!!u.zCooldown,zGuard:u.zGuard?.15:0,
     xRift:u.xRift||0,xHeal:.04*(u.xHeal||0),xDodge:.25*(u.xDodge||0),cGrab:5+(u.cGrab||0),
     cBlast:!!u.cBlast,cVulnerable:.1*(u.cVulnerable||0),vTargets:u.vTargets||0,vFinish:1+.15*(u.vFinish||0),
-    vBoss:120*(u.vBoss||0),dodgeRage:6*(u.dodgeRage||0),guardian:!!u.guardian};
+    vBoss:.2*(u.vBoss||0),dodgeRage:6*(u.dodgeRage||0),guardian:!!u.guardian,
+    dmgAll:1+.15*(u.dmgAll||0),critRate:.05*(u.critRate||0),critDmg:1.6+.25*(u.critDmg||0),
+    atkSpeed:1+.07*(u.atkSpeed||0),skillPower:1+.15*(u.skillPower||0),moveSpeed:1+.05*(u.moveSpeed||0),
+    armor:.06*(u.armor||0),healBoost:1+.15*(u.healBoost||0),ultRefund:20*(u.ultRefund||0),execute:.25*(u.execute||0)};
 }
 function getUpgradeChoices(){
   const level=run?run.level:1,u=run?run.upgrades:{};
   const available=UPGRADES.filter(x=>!x.fallback&&x.min<=level&&(u[x.id]||0)<x.max);
-  const core=level%10===0?available.filter(x=>x.core):[];
   const choices=[];
-  function add(list){if(!list.length)return;const a=list[Math.floor(Math.random()*list.length)];if(!choices.includes(a))choices.push(a);}
-  add(core);let guard=0;
-  while(choices.length<3&&guard++<100){const before=choices.length;add(available.filter(x=>!choices.includes(x)&&(choices.length<1||choices.some(c=>c.school!==x.school))));if(choices.length===before)add(available.filter(x=>!choices.includes(x)));}
-  for(const id of ['fallbackHp','fallbackHeal'])if(choices.length<3)choices.push(UPGRADE_MAP[id]);
-  if(choices.length<3&&choices[0]?.id==='fallbackHp')choices.push(UPGRADE_MAP.fallbackHp);
+  const push=list=>{if(!list.length)return;const a=list[Math.floor(Math.random()*list.length)];if(!choices.includes(a))choices.push(a);};
+  if(level%10===0)push(available.filter(x=>x.core));
+  while(choices.length<3){
+    const other=available.filter(x=>!choices.includes(x)&&!choices.some(c=>c.school===x.school));
+    const rest=available.filter(x=>!choices.includes(x));
+    if(!other.length&&!rest.length)break;
+    push(other.length?other:rest);
+    if(!other.length&&!rest.length)break;
+  }
+  for(const id of ['fallbackHp','fallbackHeal']){
+    if(choices.length>=3)break;
+    const f=UPGRADE_MAP[id];
+    if(!f||(u[id]||0)>=f.max||choices.includes(f))continue;
+    choices.push(f);
+  }
+  if(choices.length<3){
+    for(const f of [UPGRADE_MAP.fallbackHp,UPGRADE_MAP.fallbackHeal]){
+      if(choices.length>=3)break;
+      if((u[f.id]||0)>=f.max)continue;
+      if(!choices.includes(f))choices.push(f);
+    }
+  }
   return choices.slice(0,3);
 }
 
@@ -1265,7 +1352,7 @@ const player = {
   turn:1, swordA:null, moveBlend:0,
   target:null, cGrab:null, cTarget:null,
   rage:0, kills:0, healAcc:0,
-  skill:{ z:{cd:0,max:5}, x:{cd:0,max:8}, c:{cd:0,max:9}, v:{cd:0,max:1} },
+  skill:{ z:{cd:0,max:6}, x:{cd:0,max:9}, c:{cd:0,max:10}, v:{cd:0,max:1} },
   trail:[]
 };
 
@@ -1281,7 +1368,7 @@ function resetPlayer(){
     slideT:-1, slideHit:false, slideK:0, target:null, cGrab:null, cTarget:null,
     turn:1, swordA:null, moveBlend:0, hitBuff:0, zGuardT:0,
     rage:0, kills:0, healAcc:0,
-    skill:{ z:{cd:0,max:5}, x:{cd:0,max:8}, c:{cd:0,max:9}, v:{cd:0,max:1} },
+    skill:{ z:{cd:0,max:6}, x:{cd:0,max:9}, c:{cd:0,max:10}, v:{cd:0,max:1} },
     trail:[]
   });
   syncCoreToPlayer();ribbon.reset(player.x, player.y-103);
@@ -1333,9 +1420,10 @@ function burst(x,y,n,color,spd,size){
       size:rand(1.5,size||4), life:rand(.25,.6), g:rand(150,520) });
   }
 }
-function addFloat(x,y,text,color,size,vy){
-  if(G.floats.length > 36) G.floats.shift();      // 限制上限，避免大招时文字过多拖慢渲染
-  G.floats.push({ x, y, text, color:color||'#fff', size:size||18, life:0.85, max:0.85, vy:vy==null?-70:vy });
+function addFloat(x,y,text,color,size,vy,opts){
+  if(G.floats.length > 40) G.floats.shift();
+  G.floats.push({ x, y, text, color:color||'#fff', size:size||18, life:0.85, max:0.85, vy:vy==null?-70:vy,
+    glow:!!opts?.glow, crit:!!opts?.crit, pop:opts?.pop!==false });
 }
 function addEffect(o){ if(G.effects.length>=180)G.effects.shift(); G.effects.push(Object.assign({ t:0, dur:0.3, layer:1, type:'ring' }, o)); }
 
@@ -1369,7 +1457,7 @@ function gainRage(n){
 }
 function healPlayer(pct, label){
   if(player.dead) return;
-  const amount = Math.round(player.maxHp * pct);
+  const amount = Math.round(player.maxHp * pct * (MODS.healBoost||1));
   player.hp = clamp(player.hp + amount, 0, player.maxHp);
   G.stats.healed += amount;
   if(label !== false) addFloat(player.x, player.y-92, '+'+amount, '#7dffa8', 20, -60);
@@ -1379,10 +1467,15 @@ function addCombo(){
   player.comboIdx = (player.comboIdx + 1) % 3;
 }
 
+function fmtDmg(n){
+  if(n>=10000){ const w=n/10000; return (Math.round(w*10)/10).toString().replace(/\.0$/,'')+'万'; }
+  return String(n);
+}
 function hitEnemy(e, dmg, opts){
   opts = opts || {};
   if(!e || e.dead || e.spawnT>0) return false;
-  let d = dmg;
+  let d = dmg * DMG_SCALE * levelPower();
+  if(!opts.world) d *= (MODS.dmgAll||1) * (opts.skill ? (MODS.skillPower||1) : 1);
   // 盾卫正面格挡（技能无视）
   if(e.type==='shield' && !opts.skill && !opts.pierce && !(e.breakT>0)){
     const ang = Math.atan2(player.y - e.y, player.x - e.x);
@@ -1395,20 +1488,22 @@ function hitEnemy(e, dmg, opts){
   if(e.shieldT>0)d*=.35;
   if(e.boss&&e.breakT>0)d*=1.35;
   if((opts.skill||opts.kb>400)&&e.type==='shield'){e.breakT=1.5;addFloat(e.x,e.y-e.r-35,'破防','#ffd166',14);}
-  const crit = opts.crit || Math.random() < 0.12;
+  const crit = opts.crit || Math.random() < 0.15 + (MODS.critRate||0);
   if(e.stun>0)d*=1+MODS.cVulnerable;
   if(opts.basic&&player.hitBuff>0){d*=1+MODS.basicPower;player.hitBuff=0;}
-  if(e.boss&&opts.ultFinish&&MODS.vBoss){d+=MODS.vBoss;e.breakT=1.5;}
+  if(MODS.execute&&e.hp/e.maxHp<0.3)d*=1+MODS.execute;
+  if(e.boss&&opts.ultFinish&&MODS.vBoss){d*=1+MODS.vBoss;e.breakT=1.5;}
 
-  if(crit) d *= 1.6;
+  if(crit) d *= (MODS.critDmg||1.6);
   e.hp -= d;
   e.flash = 0.1;
   if(opts.kb){ e.kx += Math.cos(opts.ang||0)*opts.kb; e.ky += Math.sin(opts.ang||0)*opts.kb; }
-  const shown = Math.round(d);
-  addFloat(e.x + rand(-8,8), e.y - e.r - 18, String(shown), crit?'#ffd166':(opts.color||'#fff'), crit?22:16);
-  burst(e.x, e.y - e.r*0.4, crit?8:4, crit?['#ffd166','#ff8a5a']:['#ff8a5a','#ff5a3c'], 170, 3);
-  AudioSys.sfx(crit?'crit':'hit');
-  if(!opts.noRage) gainRage(opts.skill ? 5 : 4);
+  const shown = Math.ceil(d - 1e-9);
+  if(crit) addFloat(e.x + rand(-8,8), e.y - e.r - 18, fmtDmg(shown), '#ff3b30', 28, -96, {glow:true,crit:true});
+  else addFloat(e.x + rand(-8,8), e.y - e.r - 18, fmtDmg(shown), opts.color||'#ffffff', 17, -72, {pop:true});
+  burst(e.x, e.y - e.r*0.4, crit?10:4, crit?['#ff3b30','#ffd166','#fff']:['#ff8a5a','#ff5a3c'], crit?230:170, crit?4.5:3);
+  if(!opts.noSfx) AudioSys.sfx(crit?'crit':'hit');
+  // 怒气不再按“命中个数”叠加：改由每次出手 / 每次技能 / 击杀统一给，避免一刀扫到 8 只就回满
   // 普攻不顿帧、不震屏；技能命中只做极短顿帧，避免连续命中时产生卡顿感
   if(opts.skill && !opts.noStop){
     G.hitStop = Math.max(G.hitStop, crit ? 0.02 : 0);
@@ -1423,22 +1518,22 @@ function killEnemy(e){
   e.grabbed = 0;
   G.stats.kills++;if(run)run.totals.kills++;
   if(player.zT>0){player.zKills=(player.zKills||0)+1;if(MODS.zCooldown&&player.zKills===3)player.skill.z.cd=Math.max(0,player.skill.z.cd-1);}
-  player.healAcc += 0.5;
+  player.healAcc += 0.25;
   if(player.healAcc >= 1){
     player.healAcc -= 1;
     healPlayer(0.01, false);
     addFloat(player.x + rand(-16,16), player.y - 100, '+1%', '#7dffa8', 13, -55);
   }
   // 大招期间击杀只回一半怒气，避免"大招清场 → 怒气瞬间回满 → 无脑连放大招"
-  gainRage(player.ultDone ? 14 : 7);
+  gainRage(player.ultDone ? 2.5 : 1.2);
   burst(e.x, e.y - e.r*0.4, 14, [e.color, '#ff8a5a', '#3a0a0a'], 260, 4.5);
   ringFx(e.x, e.y, e.r*2.6, e.color, 0.3, 2);
   AudioSys.sfx('death');
 
   // 掉落
   const roll = Math.random();
-  if(roll < 0.13) G.pickups.push({ x:e.x, y:e.y, type:'heal', t:0, life:14 });
-  else if(roll < 0.34) G.pickups.push({ x:e.x, y:e.y, type:'rage', t:0, life:14 });
+  if(roll < 0.08) G.pickups.push({ x:e.x, y:e.y, type:'heal', t:0, life:14 });
+  else if(roll < 0.16) G.pickups.push({ x:e.x, y:e.y, type:'rage', t:0, life:14 });
 
   if(e.boss){
     G.bossDefeated = true;G.shake = 12;
@@ -1456,12 +1551,13 @@ function hurtPlayer(dmg, sx, sy){
   if(G.state !== 'playing'||G.outcome) return;
   if(dmg>=15)for(const e of G.enemies){if(!e.dead&&e.affixes?.includes('leech'))e.hp=Math.min(e.maxHp,e.hp+e.maxHp*.025);}
   if(player.spdBuffT>0)dmg*=1-MODS.zGuard;
+  if(MODS.armor)dmg*=1-MODS.armor;
   if(run&&run.assist==='damage15')dmg*=.85;
   if(run&&MODS.guardian&&!run.chapterGuardUsed[G.level.chapter]&&player.hp-dmg<=0){
     run.chapterGuardUsed[G.level.chapter]=true;player.hp=1;player.invuln=1.5;addFloat(player.x,player.y-100,'一线生机','#ffd166',22);return;
   }
   player.hp -= dmg;
-  player.invuln = 0.72;
+  player.invuln = 0.55;
   player.hurtT = 0.3;
   G.stats.dmgTaken += dmg;
   G.shake = Math.max(G.shake, 3.5);
@@ -1469,7 +1565,7 @@ function hurtPlayer(dmg, sx, sy){
   addFloat(player.x, player.y - 96, '-'+Math.round(dmg), '#ff4d4d', 22);
   burst(player.x, player.y - 50, 12, ['#ff2d2d','#ff8a5a'], 220, 4);
   AudioSys.sfx('hurt');
-  gainRage(dmg * 0.6);
+  gainRage(dmg * 0.2);
   // 击退
   const a = Math.atan2(player.y - sy, player.x - sx);
   player.vx += Math.cos(a) * 260;
@@ -1510,9 +1606,10 @@ function findTarget(maxDist){
 /* ---------- 普攻（自动瞄准最近敌人） ---------- */
 function basicAttack(target){
   const p = player;
-  p.attackCd = 0.30;
-  p.attackAnim = 0.30;
-  p.attackDur = 0.30;
+  const speed = MODS.atkSpeed || 1;
+  p.attackCd = 0.30 / speed;
+  p.attackAnim = 0.30 / speed;
+  p.attackDur = 0.30 / speed;
   p.comboIdx = (p.comboIdx + 1) % 3;
   const idx = p.comboIdx;
   const a = Math.atan2(target.y - (p.y - 40), target.x - p.x);
@@ -1538,7 +1635,7 @@ function basicAttack(target){
     const ok = hitEnemy(e, dmg, { kb: idx===2?330:150, ang, color:'#fff',basic:true });
     if(ok) hitAny = true;
   }
-  if(hitAny){gainRage(3*(G.combo>=10?MODS.basicRage:1));if(idx===2)p.hitBuff=1;}
+  if(hitAny){gainRage(0.8*(G.combo>=10?MODS.basicRage:1));if(idx===2)p.hitBuff=1;}
   // 朝目标小步突进；目标略远时步子更大，自动贴身
   const dist = hyp(target.x - p.x, target.y - p.y);
   const gap = dist - (reach*0.72 + target.r);
@@ -1556,8 +1653,8 @@ function dodge(){
   const l = hyp(ix,iy) || 1;
   player.dashDirX = ix/l; player.dashDirY = iy/l;
   player.dashT = 0.17;
-  player.dashCd = 1.05;
-  player.invuln = Math.max(player.invuln, 0.28);player.perfectDodgeT=.22;
+  player.dashCd = 1.30;
+  player.invuln = Math.max(player.invuln, 0.22);player.perfectDodgeT=.22;
   AudioSys.sfx('slash');
   for(let i=0;i<8;i++) addParticle(player.x, player.y-40, { vx:-player.dashDirX*rand(40,160), vy:-player.dashDirY*rand(40,160), color:'#ff5a4a', size:rand(2,4), life:0.35, g:0 });
 }
@@ -1584,14 +1681,16 @@ function zImpact(){
   burst(player.x, player.y-40, 22, ['#ff5a3c','#ffd166','#fff'], 320, 4);
   G.shake = Math.max(G.shake, 3);
   G.hitStop = 0;
-  AudioSys.sfx('land');
+  AudioSys.sfx('zImpact');
+  let hits=0;
   for(const e of G.enemies){
     if(e.dead) continue;
     const d = hyp(e.x-player.x, e.y-player.y);
     if(d < R + e.r){
-      hitEnemy(e, dmg, { skill:true, kb:420, ang:Math.atan2(e.y-player.y, e.x-player.x), color:'#ff8a5a' });
+      if(hitEnemy(e, dmg, { skill:true, kb:420, ang:Math.atan2(e.y-player.y, e.x-player.x), color:'#ff8a5a', noSfx:true })) hits++;
     }
   }
+  if(hits) gainRage(2);
   addFloat(player.x, player.y-120, '移速 +50%', '#ffd166', 13, -50);
 }
 
@@ -1617,7 +1716,7 @@ function castX(){
   player.xTo = { x:tx, y:ty };
   player.xJumpT = 0;
   player.xLanded = false;
-  player.invuln = Math.max(player.invuln, 0.62);
+  player.invuln = Math.max(player.invuln, 0.38);
   player.vx = 0; player.vy = 0;
   AudioSys.sfx('jump');
   burst(player.x, player.y, 8, ['#ff8a5a','#fff'], 150, 3);
@@ -1635,16 +1734,20 @@ function xLand(){
     addEffect({ type:'line', x1:x, y1:y, x2:x+Math.cos(a)*R*1.05, y2:y+Math.sin(a)*R*1.05, color:'#ff8a5a', dur:0.3, layer:1, width:3 });
   }
   burst(x, y-10, 30, ['#ffd166','#ff6a2a','#fff'], 460, 5);
+  let hits = 0;
   for(const e of G.enemies){
     if(e.dead) continue;
     const d = hyp(e.x-x, e.y-y);
     for(const b of G.field.barrels||[]){if(!b.dead&&hyp(b.x-x,b.y-y)<R){b.dead=true;blastAt(b.x,b.y,130,30,true);}}
     if(d < R + e.r){
-      hitEnemy(e, dmg, { skill:true, kb:560, ang:Math.atan2(e.y-y, e.x-x), color:'#ffd166', crit: Math.random()<0.3 });
+      if(hitEnemy(e, dmg, { skill:true, kb:560, ang:Math.atan2(e.y-y, e.x-x), color:'#ffd166', crit: Math.random()<0.3, noSfx:true })) hits++;
     }
   }
   for(const a of G.field.altars||[]){if(hyp(a.x-x,a.y-y)<R){a.broken=5;a.charge=0;addFloat(a.x,a.y-45,'祭坛中断','#ffd166',14);}}
-  healPlayer(0.20+MODS.xHeal);
+  AudioSys.sfx('xImpact');
+  if(hits) gainRage(2);
+  // 命中越多回血越多：单体 6%，踩中 4 只以上 14%，鼓励跳进怪群里用
+  healPlayer(0.06 + Math.min(0.08, hits*0.02) + MODS.xHeal);
   player.dashCd=Math.max(0,player.dashCd-MODS.xDodge);
   if(MODS.xRift)G.field.rifts=(G.field.rifts||[]).concat({x,y,r:90,t:3,tick:.2});
 }
@@ -1728,7 +1831,7 @@ function cImpact(ip){
     e.x = clamp(e.x, ARENA.l+14, ARENA.r-14); e.y = clamp(e.y, ARENA.t+14, ARENA.b-14);
     e.grabbed = 0; e.stun = 1.1;
   }
-  AudioSys.sfx('land');
+  AudioSys.sfx('cImpact');
   G.hitStop = 0.03;
   G.shake = Math.max(G.shake, 4);
   ringFx(ip.x, ip.y, R, '#ff5ad6', 0.45, 7);
@@ -1740,14 +1843,14 @@ function cImpact(ip){
   }
   // 砸击伤害：被砸的 + 落点范围内的
   for(const g of thrown){
-    hitEnemy(g.e, 36 + thrown.length*4, { skill:true, color:'#ff5ad6', pierce:true });
+    hitEnemy(g.e, 36 + thrown.length*4, { skill:true, color:'#ff5ad6', pierce:true, noSfx:true });
   }
   let stunned = 0;
   for(const e of G.enemies){
     if(e.dead || e.spawnT>0) continue;
     if(thrown.some(g => g.e === e)) continue;
     if(hyp(e.x-ip.x, e.y-ip.y) < R + e.r){
-      hitEnemy(e, 58, { skill:true, color:'#ffd166', kb:260, ang:Math.atan2(e.y-ip.y, e.x-ip.x), pierce:true });
+      hitEnemy(e, 58, { skill:true, color:'#ffd166', kb:260, ang:Math.atan2(e.y-ip.y, e.x-ip.x), pierce:true, noSfx:true });
       stunned++;
     }
   }
@@ -1758,6 +1861,7 @@ function cImpact(ip){
     else e.stun = Math.max(e.stun, 0.8);
   }
   addFloat(ip.x, ip.y-90, `砸击 ×${thrown.length} · 眩晕 ${stunned+thrown.length}`, '#ff5ad6', 16);
+  if(thrown.length+stunned>0) gainRage(2);
   p.cGrab = null;
   if(MODS.cBlast)scheduleGame(.55,()=>{if(!G.outcome)blastAt(ip.x,ip.y,150,35,true);},'c-blast');
 }
@@ -1801,7 +1905,8 @@ function ultStep(){
     if(key < bk){ bk = key; best = e; }
   }
   if(!best){
-    p.ultT = 0; p.ultDone = true; ultEnd(); return;
+    // 不在这里直接调用 ultEnd：交给 updatePlayer 的统一收尾分支，避免同一帧重复收尾/重复音效
+    p.ultT = 0; p.ultDone = true; return;
   }
   const bd = hyp(best.x-p.x, best.y-p.y);
   const a = bd > 14 ? Math.atan2(best.y-p.y, best.x-p.x) : (p.ultAim == null ? p.aim : p.ultAim);
@@ -1827,7 +1932,9 @@ function slideStrike(){
   const p = player;
   const a = p.ultAim;
   const x1 = p.slideFrom.x, y1 = p.slideFrom.y, x2 = p.x, y2 = p.y;
-  AudioSys.sfx('slash2');
+  AudioSys.sfx('ultcut', p.ultCount);
+  // 每一斩都卡 2 帧顿挫，让刀光、命中与音效落在同一拍上
+  G.hitStop = Math.max(G.hitStop, 0.032);
   slashFx(p.x + Math.cos(a)*40, p.y-42 + Math.sin(a)*40, a, 150, '#ff4d8a');
   slashFx(p.x, p.y-42, a + 0.6, 120, '#ffffff');
   const dx = x2-x1, dy = y2-y1, l2 = dx*dx+dy*dy || 1;
@@ -1837,7 +1944,7 @@ function slideStrike(){
     if(hyp(e.x-(x1+dx*t), e.y-(y1+dy*t)) < 62 + e.r){
       const n = p.ultHits.get(e)||0;
       p.ultHits.set(e, n+1);
-      hitEnemy(e, n===0 ? 64 : 40, { skill:true, color:'#ff5ad6', crit:true, kb:120, ang:a, pierce:true, noStop:true, noRage:true });
+      hitEnemy(e, n===0 ? 64 : 40, { skill:true, color:'#ff5ad6', crit:true, kb:120, ang:a, pierce:true, noStop:true, noRage:true, noSfx:true });
     }
   }
   p.ultCount++;
@@ -1846,10 +1953,10 @@ function ultEnd(){
   const p = player;
   const R = 230*MODS.vFinish;
   p.ultT = 0;
-  // 收尾只用轻微慢放，不震屏、不顿帧
-  G.hitStop = 0;
+  // 收尾顿帧更重一点，作为整套连斩的落点
+  G.hitStop = 0.07;
   G.slow = 0.55; G.slowT = 0.18;
-  AudioSys.sfx('explode');
+  AudioSys.sfx('ultFinish');
   ringFx(p.x, p.y-40, R, '#ff2d6a', 0.5, 7);
   ringFx(p.x, p.y-40, R*0.6, '#ffd166', 0.36, 4);
   burst(p.x, p.y-40, 30, ['#ff2d6a','#ffd166','#fff'], 540, 6);
@@ -1859,8 +1966,9 @@ function ultEnd(){
   }
   for(const e of G.enemies){
     if(e.dead) continue;
-    if(hyp(e.x-p.x, e.y-p.y) < R + e.r) hitEnemy(e, 72, { skill:true, color:'#ffd166', crit:true, kb:560, ang:Math.atan2(e.y-p.y, e.x-p.x), pierce:true, noStop:true, noRage:true,ultFinish:true });
+    if(hyp(e.x-p.x, e.y-p.y) < R + e.r) hitEnemy(e, 72, { skill:true, color:'#ffd166', crit:true, kb:560, ang:Math.atan2(e.y-p.y, e.x-p.x), pierce:true, noStop:true, noRage:true, noSfx:true, ultFinish:true });
   }
+  if(MODS.ultRefund) gainRage(MODS.ultRefund);
   addFloat(p.x, p.y-134, `连斩 ×${p.ultCount}`, '#ffd166', 20);
 }
 
@@ -1986,7 +2094,7 @@ function updatePlayer(dt){
   } else {
     p.jumpZ = 0;
     // 移动
-    const spd = p.speed * (p.spdBuffT > 0 ? 1.5 : 1);
+    const spd = p.speed * (p.spdBuffT > 0 ? 1.5 : 1) * (MODS.moveSpeed||1);
     if(p.dashT > 0){
       p.dashT -= dt;
       p.vx = p.dashDirX * 980;
@@ -2087,11 +2195,13 @@ function spawnPoint(){
 function makeEnemy(type, x, y, elite){
   const b = ENEMY_TYPES[type];
   const sc = lvScale(G.levelIndex + 1);
+  const hpMul = enemyHpScale() * (elite?2.4:1);
   const e = {
     type, x, y, vx:0, vy:0, kx:0, ky:0,
-    hp: b.hp * sc.hp * (elite?2.4:1),
-    maxHp: b.hp * sc.hp * (elite?2.4:1),
-    dmg: b.dmg * sc.dmg * (elite?1.35:1),
+    hp: b.hp * hpMul,
+    maxHp: b.hp * hpMul,
+    // 单击伤害下调 25%，把压力从“偶尔一下狠”改成“持续小压力”
+    dmg: b.dmg * sc.dmg * (elite?1.35:1) * 0.75,
     speed: b.speed * sc.spd * (elite?1.05:1),
     r: b.r, color: b.color,
     stun:0, pulled:0, flash:0, spawnT:0.55, phase:rand(0,TAU),
@@ -2238,7 +2348,7 @@ function updateEnemies(dt){
             // 自爆
             const R = 118;
             e.dead = true;
-            G.stats.kills++; player.kills++; player.healAcc += 0.5;
+            G.stats.kills++; player.kills++; player.healAcc += 0.25;
             if(player.healAcc >= 1){ player.healAcc -= 1; healPlayer(0.01, false); }
             ringFx(e.x, e.y-10, R, '#ffb020', 0.4, 6);
             burst(e.x, e.y-10, 26, ['#ffd166','#ff6a2a','#2a2a3a'], 420, 5);
@@ -2248,7 +2358,7 @@ function updateEnemies(dt){
             if(hyp(p.x-e.x, p.y-e.y) < R + p.r) hurtPlayer(e.dmg, e.x, e.y);
             for(const o of G.enemies){
               if(o===e || o.dead) continue;
-              if(hyp(o.x-e.x, o.y-e.y) < R + o.r) hitEnemy(o, 90, { skill:true, color:'#ffb020', pierce:true });
+              if(hyp(o.x-e.x, o.y-e.y) < R + o.r) hitEnemy(o, 90, { world:true, skill:true, color:'#ffb020', pierce:true, noRage:true, noSfx:true });
             }
           }
         } else {
@@ -2507,7 +2617,7 @@ function updatePickups(dt){
     if(d < 26 && !player.dead){
       pk.life = 0;
       if(pk.type==='heal'){ healPlayer(0.04); addFloat(player.x, player.y-104, '+4%', '#7dffa8', 15); }
-      else { gainRage(18); addFloat(player.x, player.y-104, '+18 怒气', '#c04bff', 15); }
+      else { gainRage(6); addFloat(player.x, player.y-104, '+6 怒气', '#c04bff', 15); }
       AudioSys.sfx('pickup');
       burst(pk.x, pk.y, 8, pk.type==='heal'?['#7dffa8','#fff']:['#c04bff','#fff'], 150, 3);
     }
@@ -2565,7 +2675,7 @@ function startLevel(idx,options){
   el('hud').classList.remove('hidden');el('bossWrap').classList.remove('on');el('summaryCard').classList.add('hidden');
   banner(G.level.name,'第 '+run.level+' 关 · '+G.level.sub,1900);
   if(!options.retry){G.entrySnapshot=captureRunSnapshot();saveEntry();}
-  if(idx===0&&G.mode==='campaign'){scheduleGame(.9,()=>hint(IS_TOUCH?'左下摇杆移动 · 自动锁敌普攻':'WASD / 方向键移动 · 自动锁敌普攻'),'tutorial');scheduleGame(4.2,()=>hint(IS_TOUCH?'点「旋」群伤并加速':'Z 旋风斩：群伤并加速 2 秒'),'tutorial');scheduleGame(7.6,()=>hint(IS_TOUCH?'点「跃」范围伤害并回血':'X 跃斩：范围伤害并回血 20%'),'tutorial');scheduleGame(11,()=>hint(IS_TOUCH?'点「投」聚怪并眩晕':'C 裂空投：聚怪并眩晕'),'tutorial');}
+  if(idx===0&&G.mode==='campaign'){scheduleGame(.9,()=>hint(IS_TOUCH?'左下摇杆移动 · 自动锁敌普攻':'WASD / 方向键移动 · 自动锁敌普攻'),'tutorial');scheduleGame(4.2,()=>hint(IS_TOUCH?'点「旋」群伤并加速':'Z 旋风斩：群伤并加速 2 秒'),'tutorial');scheduleGame(7.6,()=>hint(IS_TOUCH?'点「跃」范围伤害并回血':'X 跃斩：范围伤害，命中越多回血越多'),'tutorial');scheduleGame(11,()=>hint(IS_TOUCH?'点「投」聚怪并眩晕':'C 裂空投：聚怪并眩晕'),'tutorial');}
   else scheduleGame(1.2,()=>hint(G.level.desc),'tutorial');
 }
 
@@ -2614,34 +2724,41 @@ function updateWaves(dt){
     if(G.spawnQueue.length > 0){
       G.spawnT -= dt;
       if(G.spawnT <= 0){
-        const type = G.spawnQueue.shift();
-        if(G.enemies.filter(e=>!e.dead).length<32){spawnEnemy(type,false);G.spawnT=Math.max(.2,.4-.002*G.levelIndex);}
+        const batch = G.levelIndex>=39?3:(G.levelIndex>=9?2:1);
+        const aliveN = G.enemies.filter(e=>!e.dead).length;
+        const room = Math.max(0, 32-aliveN);
+        const n = Math.min(batch, room, G.spawnQueue.length);
+        for(let i=0;i<n;i++) spawnEnemy(G.spawnQueue.shift(),false);
+        G.spawnT = Math.max(.22,.6-.003*G.levelIndex);
       }
+    }
+    const aliveN = G.enemies.filter(e=>!e.dead).length;
+    // 第 3 章起，场上剩 3 只就提前放下一波，保持持续压迫；最后一波仍需清完
+    if(G.spawnQueue.length===0 && aliveN<=3 && G.level.chapter>=3 &&
+       G.waveIdx+1 < G.level.waves.length && !G.level.boss){
+      G.phase='intermission'; G.timer=.8;
+      return;
     }
     if(G.spawnQueue.length === 0){
       G.phase = 'fighting';
       // 波次结束判定
-      const alive = G.enemies.some(e=>!e.dead);
+      const alive = aliveN>0;
       if(!alive && !G.bossSpawned){
         if(G.waveIdx + 1 < G.level.waves.length){
-          // 精英
-          if(G.level.elite && G.waveIdx === G.level.waves.length - 1){
-            // 最后波后出精英
-          }
           G.phase = 'intermission';
-          G.timer = 1.9;
+          G.timer = 1.15;
           banner('波次清除', 'WAVE CLEAR');
-          healPlayer(0.03);
+          healPlayer(0.02);
           AudioSys.sfx('heal');
         } else if(G.level.elite && !G.eliteSpawned){
           G.eliteSpawned = true;
           G.phase = 'elite_wait';
-          G.timer = 1.6;
+          G.timer = 1.2;
           banner('精英来袭', 'ELITE · ' + ENEMY_TYPES[G.level.elite].name);
           AudioSys.sfx('boss');
         } else if(G.level.boss && !G.bossSpawned){
           G.phase = 'intermission';
-          G.timer = 2.0;
+          G.timer = 1.6;
         } else if(!G.outcome){
           beginVictory();
         }
@@ -2655,7 +2772,7 @@ function spawnBoss(){
   G.bossSpawned=true;G.phase='boss';
   const b=makeEnemy(cfg.base==='boss'?'boss':cfg.base,W/2,H*.32,true);
   b.boss=true;b.bossConfig=cfg;b.bossId=cfg.id;b.color=THEMES[G.level.theme].accent;
-  b.hp=b.maxHp=cfg.hp;b.dmg=cfg.dmg;b.r=cfg.kind==='major'?52:38;b.state='intro';b.t=1.6;b.cd=2;b.phase=1;b.lastPhase=1;b.affixes=[];
+  b.hp=b.maxHp=Math.round(cfg.hp * bossHpScale() * (cfg.kind==='major'?1:1.6));b.dmg=cfg.dmg;b.r=cfg.kind==='major'?52:38;b.state='intro';b.t=1.6;b.cd=2;b.phase=1;b.lastPhase=1;b.affixes=[];
   b.spawnT=.9;G.enemies.push(b);banner(cfg.name,cfg.kind==='major'?'章节首领':'精英首领');
   el('bossWrap').classList.add('on');el('bossName').textContent=cfg.name;AudioSys.sfx('boss');G.shake=8;
 }
@@ -2686,7 +2803,7 @@ function showSummary(){
 function finishSummary(){
   el('summaryCard').classList.add('hidden');
   if(run.level===100&&G.mode==='campaign'){completeRun();return;}
-  const pct=G.level.boss?(G.level.boss.kind==='major'?.35:.2):.06;
+  const pct=G.level.boss?(G.level.boss.kind==='major'?.30:.15):.04;
   const before=player.hp;healPlayer(pct);G.summary.recover=Math.round(player.hp-before);
   if(G.mode==='practice'){setState('result');G.phase='result';showResult(true,G.summary.stars,G.summary.rank);return;}
   run.core.hp=player.hp;run.core.maxHp=player.maxHp;run.core.rage=player.rage;
@@ -2714,7 +2831,7 @@ function chooseUpgrade(id){
   if(G.state!=='upgrade'||G.phase!=='upgrade')return;
   const u=G.upgradeChoices.find(x=>x.id===id);if(!u)return;
   run.upgrades[id]=(run.upgrades[id]||0)+1;run.totals.upgrades++;rebuildMods();
-  if(id==='maxHp'){run.core.maxHp+=10;run.core.hp+=10;}if(id==='fallbackHp'){run.core.maxHp+=5;run.core.hp+=5;}
+  if(id==='maxHp'){run.core.maxHp+=10;run.core.hp+=10;}if(id==='fallbackHp'){const add=Math.round(run.core.maxHp*0.08);run.core.maxHp+=add;run.core.hp+=add;}
   if(id==='fallbackHeal')run.core.hp=Math.min(run.core.maxHp,run.core.hp+run.core.maxHp*.2);
   run.level++;run.assist=null;clearInput();AudioSys.sfx('heal');startLevel(run.level-1);
 }
@@ -2754,7 +2871,7 @@ function initField(){
 function blastAt(x,y,r,dmg,friendly){
   ringFx(x,y,r,'#ffb35c',.45,6);burst(x,y,18,['#ffd166','#ff633f'],300,4);
   if(hyp(player.x-x,player.y-y)<r+player.r)hurtPlayer(dmg,x,y);
-  if(friendly)for(const e of G.enemies){if(!e.dead&&e.spawnT<=0&&hyp(e.x-x,e.y-y)<r+e.r)hitEnemy(e,70,{skill:true,noRage:true,pierce:true});}
+  if(friendly)for(const e of G.enemies){if(!e.dead&&e.spawnT<=0&&hyp(e.x-x,e.y-y)<r+e.r)hitEnemy(e,70,{world:true,skill:true,noRage:true,noSfx:true,pierce:true});}
 }
 function addHazard(x,y,r,delay,dmg,friendly){
   telegraph(x,y,r,delay,'#ff7959');G.field.zones.push({x,y,r,t:delay,dmg,friendly:!!friendly,hit:new Set()});
@@ -2875,7 +2992,7 @@ function updateHud(){
 
   // 闪避冷却（只有触屏按钮需要显示，键鼠下这块 DOM 是隐藏的）
   if(IS_TOUCH && dodgeCdEl){
-    const cd = player.dashCd, max = 1.05;
+    const cd = player.dashCd, max = 1.30;
     if(cd > 0){
       const p = cd / max;
       const bg = `conic-gradient(rgba(4,2,8,.84) ${(p*360).toFixed(1)}deg, transparent 0deg)`;
@@ -3825,14 +3942,21 @@ function drawFloats(){
   ctx.textBaseline = 'middle';
   for(const f of G.floats){
     const k = clamp(f.life/f.max, 0, 1);
+    const age = f.max - f.life;
+    const pop = f.pop ? 1 + Math.max(0, .22 - age) * 2.4 : 1;
+    ctx.save();
     ctx.globalAlpha = Math.min(1, k*2.2);
+    ctx.translate(f.x, f.y);
+    ctx.scale(pop, pop);
     ctx.font = `900 ${f.size}px 'Noto Sans SC',sans-serif`;
     ctx.lineJoin = 'round';
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'rgba(0,0,0,.85)';
-    ctx.strokeText(f.text, f.x, f.y);
+    ctx.lineWidth = f.crit ? 5 : 4;
+    ctx.strokeStyle = 'rgba(0,0,0,.9)';
+    ctx.strokeText(f.text, 0, 0);
+    if(f.glow){ ctx.shadowColor = '#ff2020'; ctx.shadowBlur = 22; }
     ctx.fillStyle = f.color;
-    ctx.fillText(f.text, f.x, f.y);
+    ctx.fillText(f.text, 0, 0);
+    ctx.restore();
   }
   ctx.restore();
   ctx.globalAlpha = 1;
