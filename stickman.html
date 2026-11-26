@@ -830,7 +830,8 @@ const AudioSys = {
   tone(o){
     if(!this.ctx || this.muted) return;
     if(o.music ? !this.musicEnabled : !this.sfxEnabled) return;
-    const c=this.ctx, t=c.currentTime + (o.delay||0);
+    // 手机端渲染块大，按“当前时刻”排程可能落进已渲染的过去区间而整声丢失；统一至少 20ms 前瞻
+    const c=this.ctx, t=c.currentTime + Math.max(o.delay||0, 0.02);
     const osc=c.createOscillator(), g=c.createGain();
     osc.type = o.type||'sine';
     osc.frequency.setValueAtTime(o.f0||440, t);
@@ -859,7 +860,7 @@ const AudioSys = {
   noise(o){
     if(!this.ctx || this.muted) return;
     if(o.music ? !this.musicEnabled : !this.sfxEnabled) return;
-    const c=this.ctx, t=c.currentTime + (o.delay||0), dur=o.dur||0.15;
+    const c=this.ctx, t=c.currentTime + Math.max(o.delay||0, 0.02), dur=o.dur||0.15;
     const src = c.createBufferSource(); src.buffer = this.noiseBuf(dur, !!o.flat);
     const f = c.createBiquadFilter(); f.type = o.filter||'bandpass';
     f.frequency.setValueAtTime(o.f0||1200, t);
@@ -4450,7 +4451,7 @@ function buildLevelGrid(){
     if(!locked)card.onclick=()=>{AudioSys.init();AudioSys.sfx('ui');startLevel(i,{mode:'practice'});};grid.appendChild(card);
   });
 }
-const BUILD = '2026-11-26.4';
+const BUILD = '2026-11-26.5';
 function refreshBuildTag(){
   const tag = el('buildTag'); if(!tag) return;
   let audio = '未初始化';
@@ -4599,11 +4600,25 @@ el('btnSettings').addEventListener('click',()=>openSettings(false));
 el('btnSettingsBack').addEventListener('click',closeSettings);
 el('btnAudioTest').addEventListener('click',()=>{
   AudioSys.init();
-  AudioSys.sfx('slash');
-  setTimeout(()=> AudioSys.sfx('hit'), 280);
-  setTimeout(()=> AudioSys.sfx('zImpact'), 640);
-  setTimeout(refreshBuildTag, 140);
-  el('saveNotice').textContent = '播放顺序：普攻 → 命中 → 旋风斩';
+  const c=AudioSys.ctx;
+  if(!c){ el('saveNotice').textContent='AudioContext 创建失败：此浏览器不支持或拒绝了音频'; return; }
+  // 三段定位：①绕过音效支路直连总线 ②走音效支路 ③普攻合成音，哪段哑就知道哪里断
+  const beep=(dest,delay)=>{
+    const t=c.currentTime+delay, o=c.createOscillator(), g=c.createGain();
+    o.type='sine'; o.frequency.value=880;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.3,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t+0.4);
+  };
+  beep(AudioSys.master, 0.05);
+  beep(AudioSys.sfxGain, 0.65);
+  setTimeout(()=> AudioSys.sfx('slash'), 1250);
+  setTimeout(()=>{
+    const g=AudioSys.sfxGain?AudioSys.sfxGain.gain.value.toFixed(2):'-';
+    el('saveNotice').textContent='①直连 ②支路 ③普攻，听到了哪几声？｜状态 '+c.state+' · 音效开关 '+(AudioSys.sfxEnabled?'开':'关')+' · 支路增益 '+g+' · 音量 '+Math.round(AudioSys.sfxVol*100)+'%';
+    refreshBuildTag();
+  }, 1600);
 });
 el('btnForceUpdate').addEventListener('click',()=>{
   const u = new URL(location.href);

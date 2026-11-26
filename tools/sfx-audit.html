@@ -86,7 +86,7 @@ const AudioSys = {
   tone(o){
     if(!this.ctx || this.muted) return;
     if(o.music ? !this.musicEnabled : !this.sfxEnabled) return;
-    const c=this.ctx, t=c.currentTime + (o.delay||0);
+    const c=this.ctx, t=c.currentTime + Math.max(o.delay||0, 0.02);
     const osc=c.createOscillator(), g=c.createGain();
     osc.type = o.type||'sine';
     osc.frequency.setValueAtTime(o.f0||440, t);
@@ -114,7 +114,7 @@ const AudioSys = {
   noise(o){
     if(!this.ctx || this.muted) return;
     if(o.music ? !this.musicEnabled : !this.sfxEnabled) return;
-    const c=this.ctx, t=c.currentTime + (o.delay||0), dur=o.dur||0.15;
+    const c=this.ctx, t=c.currentTime + Math.max(o.delay||0, 0.02), dur=o.dur||0.15;
     const src = c.createBufferSource(); src.buffer = this.noiseBuf(dur, !!o.flat);
     const f = c.createBiquadFilter(); f.type = o.filter||'bandpass';
     f.frequency.setValueAtTime(o.f0||1200, t);
