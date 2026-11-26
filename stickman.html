@@ -759,7 +759,10 @@ const AudioSys = {
   musicEnabled:true, sfxEnabled:true, musicVol:.65, sfxVol:.9,
   musicOn:false, timer:null, step:0, nextT:0,
   init(){
-    if(this.ctx) { if(this.ctx.state==='suspended') this.ctx.resume(); return; }
+    if(this.ctx){
+      if(this.ctx.state==='suspended'){ const p=this.ctx.resume(); if(p&&p.catch)p.catch(()=>{}); }
+      return;
+    }
     const AC = window.AudioContext || window.webkitAudioContext;
     if(!AC) return;
     try{
@@ -773,6 +776,12 @@ const AudioSys = {
       this.musicGain.connect(this.master);
       this.sfxGain.connect(this.master);
       this.master.connect(this.ctx.destination);
+      // iOS / 部分安卓：先播一个静音采样把音频通道真正解锁，之后合成的音效才稳定出声
+      const unlock = this.ctx.createBufferSource();
+      unlock.buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+      unlock.connect(this.ctx.destination);
+      if(unlock.start) unlock.start(0);
+      if(this.ctx.state==='suspended'){ const p=this.ctx.resume(); if(p&&p.catch)p.catch(()=>{}); }
       this.startMusic();
     }catch(err){ this.ctx = null; }
   },
@@ -821,22 +830,35 @@ const AudioSys = {
     osc.connect(g); g.connect(o.music?this.musicGain:this.sfxGain);
     osc.start(t); osc.stop(t+(o.dur||0.1)+0.03);
   },
+  noiseBuf(dur, flat){
+    // 噪声缓冲按「时长 + 是否平铺 + 采样率」缓存：手机端每次挥砍都新建缓冲会拖慢音频线程
+    const c=this.ctx, key=dur.toFixed(3)+(flat?'f':'d')+c.sampleRate;
+    this._nbuf = this._nbuf || Object.create(null);
+    let buf = this._nbuf[key];
+    if(!buf){
+      const len = Math.max(1, Math.floor(c.sampleRate * dur));
+      buf = c.createBuffer(1, len, c.sampleRate);
+      const d = buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * (flat ? 1 : (1 - i/len));
+      this._nbuf[key] = buf;
+    }
+    return buf;
+  },
   noise(o){
     if(!this.ctx || this.muted) return;
     if(o.music ? !this.musicEnabled : !this.sfxEnabled) return;
-    const c=this.ctx, t=c.currentTime + (o.delay||0);
-    const len = Math.floor(c.sampleRate * (o.dur||0.15));
-    const buf = c.createBuffer(1, len, c.sampleRate);
-    const d = buf.getChannelData(0);
-    for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * (1 - i/len);
-    const src = c.createBufferSource(); src.buffer = buf;
+    const c=this.ctx, t=c.currentTime + (o.delay||0), dur=o.dur||0.15;
+    const src = c.createBufferSource(); src.buffer = this.noiseBuf(dur, !!o.flat);
     const f = c.createBiquadFilter(); f.type = o.filter||'bandpass';
     f.frequency.setValueAtTime(o.f0||1200, t);
-    if(o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t+(o.dur||0.15));
+    if(o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t+dur);
     f.Q.value = o.q||1;
     const g = c.createGain();
-    g.gain.setValueAtTime(o.vol||0.2, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t+(o.dur||0.15));
+    const v = o.vol==null?0.2:o.vol;
+    g.gain.setValueAtTime(v, t);
+    // tail：先保持峰值再收尾，比默认“一上来就指数衰减”更适合做刃风
+    if(o.tail) g.gain.setValueAtTime(v, t+Math.min(o.tail, dur*0.7));
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
     src.connect(f); f.connect(g); g.connect(o.music?this.musicGain:this.sfxGain);
     src.start(t);
   },
@@ -852,15 +874,25 @@ const AudioSys = {
       this.lastHitAt = now;
     }
     switch(name){
-      case 'slash':
-        this.noise({dur:.15, f0:1800, f1:460, vol:.24, q:.8});
-        this.tone({type:'triangle', f0:220, f1:90, dur:.08, vol:.11}); break;
-      case 'slash2':
-        this.noise({dur:.12, f0:1600, f1:380, vol:.21, q:.7});
-        this.tone({type:'triangle', f0:260, f1:110, dur:.07, vol:.10}); break;
+      case 'slash': {
+        // 手机小喇叭对 1kHz 以下滚降很狠：普攻改成「高频刃风 + 起手瞬态」，低频只留一点身体
+        const k = 0.94 + Math.random()*0.14;   // 每次挥砍轻微变调，连打时不像机关枪
+        this.noise({dur:.16, f0:3800*k, f1:1300*k, vol:.19, q:1.0, flat:true, tail:.05});
+        this.noise({dur:.06, f0:7000*k, f1:3000*k, vol:.17, q:.6, flat:true});
+        this.tone({type:'triangle', f0:300*k, f1:100*k, dur:.12, vol:.09});
+        break;
+      }
+      case 'slash2': {
+        const k = 0.94 + Math.random()*0.14;
+        this.noise({dur:.17, f0:3200*k, f1:1100*k, vol:.20, q:.9, flat:true, tail:.06});
+        this.noise({dur:.065, f0:6200*k, f1:2600*k, vol:.17, q:.6, flat:true});
+        this.tone({type:'triangle', f0:260*k, f1:90*k, dur:.14, vol:.09});
+        break;
+      }
       case 'hit':
-        this.tone({type:'square', f0:190, f1:70, dur:.09, vol:.14});
-        this.noise({dur:.06, f0:900, vol:.1}); break;
+        this.tone({type:'triangle', f0:420, f1:140, dur:.06, vol:.13});
+        this.noise({dur:.07, f0:3200, f1:1200, vol:.24, q:1.1, flat:true});
+        this.noise({dur:.03, f0:6500, f1:4200, vol:.28, q:.7, flat:true}); break;
       case 'crit':
         this.tone({type:'sawtooth', f0:320, f1:90, dur:.16, vol:.2});
         this.noise({dur:.12, f0:2200, f1:300, vol:.18});
@@ -868,15 +900,19 @@ const AudioSys = {
       case 'zImpact':
         this.noise({dur:.34, f0:700, f1:2600, vol:.22, q:1.1});
         this.tone({type:'triangle', f0:165, f1:58, dur:.3, vol:.2});
-        this.noise({dur:.15, f0:160, f1:70, vol:.18}); break;
+        this.noise({dur:.15, f0:160, f1:70, vol:.18});
+        // 起手补一层高频脆裂，手机小喇叭也能听到「斩」的锐度
+        this.noise({dur:.09, f0:5600, f1:1800, vol:.16, q:.9, flat:true}); break;
       case 'xImpact':
         this.tone({type:'sine', f0:120, f1:34, dur:.34, vol:.32});
         this.noise({dur:.3, f0:520, f1:90, vol:.26});
-        this.tone({type:'square', f0:210, f1:55, dur:.1, vol:.12}); break;
+        this.tone({type:'square', f0:210, f1:55, dur:.1, vol:.12});
+        this.noise({dur:.10, f0:4600, f1:1400, vol:.16, q:.9, flat:true}); break;
       case 'cImpact':
         this.noise({dur:.24, f0:3000, f1:220, vol:.26, q:1.5});
         this.tone({type:'sawtooth', f0:190, f1:48, dur:.2, vol:.22});
-        this.tone({type:'sine', f0:76, f1:32, dur:.32, vol:.2, delay:.04}); break;
+        this.tone({type:'sine', f0:76, f1:32, dur:.32, vol:.2, delay:.04});
+        this.noise({dur:.08, f0:6200, f1:2000, vol:.14, q:1.0, flat:true}); break;
       case 'ultcut': {
         const n = arg||0;
         const f = 3200 + Math.min(10,n) * 130;
@@ -1071,6 +1107,8 @@ window.addEventListener('contextmenu', e=> e.preventDefault());
 window.addEventListener('blur', ()=>{ for(const k in keys) keys[k]=false; resetStick(); if(G.state==='playing') pauseGame(); });
 
 window.addEventListener('pointerdown', ()=>{ AudioSys.init(); }, {passive:true});
+window.addEventListener('touchend', ()=>{ AudioSys.init(); }, {passive:true});
+window.addEventListener('click', ()=>{ AudioSys.init(); }, {passive:true});
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) AudioSys.init(); });
 
 window.addEventListener('keydown', e=>{
