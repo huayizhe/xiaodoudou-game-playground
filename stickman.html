@@ -462,6 +462,11 @@
   .setting-row input[type=range]{width:170px;height:26px;min-height:26px;padding:0;border:none;background:transparent;accent-color:#ff6347;cursor:pointer}
   .setting-row.setting-range span{color:rgba(243,237,224,.82)}
   .build-tag{font-size:11px;letter-spacing:.04em;color:rgba(243,237,224,.42);text-align:center;margin:-8px 0 14px}
+  .update-bar{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:60;padding:10px 18px;border-radius:999px;
+    border:1px solid rgba(255,120,90,.75);background:rgba(255,59,48,.24);color:#fff;cursor:pointer;
+    font-family:inherit;font-size:13px;font-weight:600;line-height:1.4;
+    backdrop-filter:blur(6px);box-shadow:0 6px 22px rgba(0,0,0,.35)}
+  body.touch-mode .update-bar{font-size:14px;padding:12px 20px}
   .settings-actions{width:min(640px,100%);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 auto 12px}
   .settings-actions .btn{width:100%}
   .save-note{min-height:24px;color:#ffc78f;text-align:center;font-size:13px;margin:6px}
@@ -547,7 +552,7 @@
 
     <section class="screen active" id="screen-title">
       <div class="title-wrap">
-        <div class="kicker">百关连续闯关</div>
+        <div class="kicker">百关连续闯关 · <span id="buildKicker">v2026-11-26.3</span></div>
         <h1>火柴人<span>勇闯</span>恶魔岛</h1>
         <div class="tagline">红 绫 随 风 · 一 剑 破 岛</div>
         <div class="menu">
@@ -632,7 +637,7 @@
         <label class="setting-row"><span>左右布局镜像</span><input id="settingMirror" type="checkbox"></label>
       </div>
       <div class="save-note" id="saveNotice" role="status"></div>
-      <div class="build-tag" id="buildTag">版本 2026-11-26.2 · 音频 未初始化</div>
+      <div class="build-tag" id="buildTag">版本 2026-11-26.3 · 音频 未初始化</div>
       <div class="settings-actions">
         <button class="btn ghost" id="btnAudioTest">音效自检</button>
         <button class="btn ghost" id="btnForceUpdate">刷新到最新版</button>
@@ -1088,7 +1093,7 @@ window.addEventListener('blur', ()=>{ for(const k in keys) keys[k]=false; resetS
 window.addEventListener('pointerdown', ()=>{ AudioSys.init(); }, {passive:true});
 window.addEventListener('touchend', ()=>{ AudioSys.init(); }, {passive:true});
 window.addEventListener('click', ()=>{ AudioSys.init(); }, {passive:true});
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) AudioSys.init(); });
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ AudioSys.init(); checkRemoteBuild(); } });
 
 window.addEventListener('keydown', e=>{
   const k = e.key.toLowerCase();
@@ -4422,7 +4427,7 @@ function buildLevelGrid(){
     if(!locked)card.onclick=()=>{AudioSys.init();AudioSys.sfx('ui');startLevel(i,{mode:'practice'});};grid.appendChild(card);
   });
 }
-const BUILD = '2026-11-26.2';
+const BUILD = '2026-11-26.3';
 function refreshBuildTag(){
   const tag = el('buildTag'); if(!tag) return;
   let audio = '未初始化';
@@ -4431,6 +4436,21 @@ function refreshBuildTag(){
     audio = (st === 'running' ? '运行中' : st === 'suspended' ? '挂起' : st) + ' · ' + Math.round(AudioSys.ctx.sampleRate / 1000) + 'kHz';
   }
   tag.textContent = '版本 ' + BUILD + ' · 音频 ' + audio + ' · 音效 ' + Math.round(AudioSys.sfxVol * 100) + '%';
+}
+/* 页面自检版本：服务器上的 version.json 比本地新时，弹一条可点的刷新提示 */
+function checkRemoteBuild(){
+  fetch('version.json?t=' + Date.now(), { cache:'no-store' })
+    .then(r => r.ok ? r.json() : null)
+    .then(j => {
+      if(!j || !j.build || j.build === BUILD) return;
+      if(document.getElementById('updateBar')) return;
+      const bar = document.createElement('button');
+      bar.id='updateBar'; bar.type='button'; bar.className='update-bar';
+      bar.textContent = '有新版本 ' + j.build + ' · 点此刷新';
+      bar.onclick = () => location.replace(location.pathname + '?v=' + encodeURIComponent(j.build));
+      document.body.appendChild(bar);
+    })
+    .catch(()=>{});
 }
 function applySettings(){
   const s=save.settings;
@@ -4797,6 +4817,8 @@ window.__DI = { G, player, LEVELS, CHAPTERS, BOSSES, UPGRADES, UPGRADE_MAP, CONT
   getRun:()=>run,getSave:()=>save,
   get scale(){ return renderScale; } };
 applySettings();refreshTitle();
+if(el('buildKicker')) el('buildKicker').textContent = 'v' + BUILD;
+setTimeout(checkRemoteBuild, 600);
 requestAnimationFrame(frame);
 
 })();
