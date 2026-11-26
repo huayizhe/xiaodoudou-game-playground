@@ -12,22 +12,14 @@
   body{padding:22px 18px 40px;max-width:1080px;margin:0 auto}
   h1{font-size:clamp(20px,3.4vw,30px);letter-spacing:.12em;margin-bottom:8px}
   h1 span{color:#ff5a4a}
-  h2{font-size:15px;letter-spacing:.1em;margin:26px 0 10px;color:#ffb59f}
-  .sub{font-size:12.5px;line-height:1.75;color:rgba(243,237,224,.62);margin-bottom:16px}
+  .sub{font-size:12.5px;line-height:1.75;color:rgba(243,237,224,.62);margin-bottom:18px}
   .note{background:rgba(255,90,90,.08);border:1px solid rgba(255,90,90,.28);border-radius:10px;
-    padding:12px 14px;font-size:12.5px;line-height:1.8;color:#ffd9cf;margin-bottom:18px}
+    padding:12px 14px;font-size:12.5px;line-height:1.8;color:#ffd9cf;margin-bottom:20px}
   .note b{color:#fff}
-  .tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
   .pill{padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.06);
     border:1px solid var(--line);color:rgba(243,237,224,.82);font-size:13px;cursor:pointer}
   .pill.on{border-color:rgba(255,120,90,.7);background:rgba(255,59,48,.16);color:#fff}
-  .ab{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:6px}
-  .ab button{padding:14px 14px;border-radius:12px;border:1px solid var(--line);cursor:pointer;text-align:left;
-    background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.02));color:var(--bone)}
-  .ab button:active{transform:scale(.985)}
-  .ab .k{font-size:11px;letter-spacing:.14em;color:#ff8a6a;font-weight:700}
-  .ab .n{font-size:15.5px;font-weight:700;margin:3px 0 4px}
-  .ab .d{font-size:11.5px;line-height:1.6;color:rgba(243,237,224,.55)}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
   .item{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:12px;
     background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
@@ -43,22 +35,15 @@
 </head>
 <body>
 <h1>音效<span>试听</span> · 单独回放</h1>
-<p class="sub">每个按钮只播这一条音效，方便逐条核对。本页的音效参数与 <code>stickman.html</code> 内的 <code>AudioSys</code> 保持一致——改游戏音效后这里要同步。</p>
+<p class="sub">每个按钮只播这一条音效。本页参数与 <code>stickman.html</code> 里的 <code>AudioSys</code> 保持一致，改游戏音效后这里要同步。</p>
 <div class="note">
-  <b>本轮改动（普攻专项）：</b>旧版普攻是 1800→460Hz 的暗噪声，能量集中在 1–2.5kHz，手机小喇叭在 1kHz 以下滚降很狠，实测同频段 50ms 短时电平只有 −35 dB，听感几乎被背景音乐吃掉。
-  新版改为「高频刃风 + 起手瞬态」，2.5–5kHz 占一半以上能量，同一测量口径下 −27 dB（约 +8dB）；命中同步改成高频脆击。
-  三个技能的命中音各补了一层高频脆裂（Z/X 手机频段 +2dB 左右），保证普攻不会盖过技能。
-  另外：噪声缓冲改为按采样率缓存（手机不再每次挥砍都新建缓冲），音频在 pointerdown / touchend / click 三处都会尝试解锁。
+  <b>当前音色：</b>普攻与命中已还原成原来那版（普攻 1800→460Hz 暗刃风 + 220→90Hz 低频，命中 190→70Hz 方波），你确认过的那套听感。
+  底层只保留了不影响音色的音频解锁（pointerdown / touchend / click 三处 + 一个静音采样解锁）；噪声生成、包络与音量都与旧版一致。
 </div>
 <div class="tools">
   <button class="pill" id="btnMusic">循环背景音乐（对照）</button>
   <button class="pill" id="btnMute">静音</button>
 </div>
-
-<h2>普攻 A/B（手机重点，建议戴耳机对比后摘掉再听一遍）</h2>
-<div class="ab" id="ab"></div>
-
-<h2>全部音效</h2>
 <div class="grid" id="grid"></div>
 <p class="foot">全部音效由 Web Audio 实时合成，没有音频文件；本页不改游戏。</p>
 
@@ -113,33 +98,22 @@ const AudioSys = {
     osc.connect(g); g.connect(o.music?this.musicGain:this.sfxGain);
     osc.start(t); osc.stop(t+(o.dur||0.1)+0.03);
   },
-  noiseBuf(dur, flat){
-    const c=this.ctx, key=dur.toFixed(3)+(flat?'f':'d')+c.sampleRate;
-    this._nbuf = this._nbuf || Object.create(null);
-    let buf = this._nbuf[key];
-    if(!buf){
-      const len = Math.max(1, Math.floor(c.sampleRate * dur));
-      buf = c.createBuffer(1, len, c.sampleRate);
-      const d = buf.getChannelData(0);
-      for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * (flat ? 1 : (1 - i/len));
-      this._nbuf[key] = buf;
-    }
-    return buf;
-  },
   noise(o){
     if(!this.ctx || this.muted) return;
     if(o.music ? !this.musicEnabled : !this.sfxEnabled) return;
-    const c=this.ctx, t=c.currentTime + (o.delay||0), dur=o.dur||0.15;
-    const src = c.createBufferSource(); src.buffer = this.noiseBuf(dur, !!o.flat);
+    const c=this.ctx, t=c.currentTime + (o.delay||0);
+    const len = Math.floor(c.sampleRate * (o.dur||0.15));
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * (1 - i/len);
+    const src = c.createBufferSource(); src.buffer = buf;
     const f = c.createBiquadFilter(); f.type = o.filter||'bandpass';
     f.frequency.setValueAtTime(o.f0||1200, t);
-    if(o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t+dur);
+    if(o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t+(o.dur||0.15));
     f.Q.value = o.q||1;
     const g = c.createGain();
-    const v = o.vol==null?0.2:o.vol;
-    g.gain.setValueAtTime(v, t);
-    if(o.tail) g.gain.setValueAtTime(v, t+Math.min(o.tail, dur*0.7));
-    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    g.gain.setValueAtTime(o.vol||0.2, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+(o.dur||0.15));
     src.connect(f); f.connect(g); g.connect(o.music?this.musicGain:this.sfxGain);
     src.start(t);
   },
@@ -152,24 +126,15 @@ const AudioSys = {
       this.lastHitAt = now;
     }
     switch(name){
-      case 'slash': {
-        const k = 0.94 + Math.random()*0.14;
-        this.noise({dur:.16, f0:3800*k, f1:1300*k, vol:.19, q:1.0, flat:true, tail:.05});
-        this.noise({dur:.06, f0:7000*k, f1:3000*k, vol:.17, q:.6, flat:true});
-        this.tone({type:'triangle', f0:300*k, f1:100*k, dur:.12, vol:.09});
-        break;
-      }
-      case 'slash2': {
-        const k = 0.94 + Math.random()*0.14;
-        this.noise({dur:.17, f0:3200*k, f1:1100*k, vol:.20, q:.9, flat:true, tail:.06});
-        this.noise({dur:.065, f0:6200*k, f1:2600*k, vol:.17, q:.6, flat:true});
-        this.tone({type:'triangle', f0:260*k, f1:90*k, dur:.14, vol:.09});
-        break;
-      }
+      case 'slash':
+        this.noise({dur:.15, f0:1800, f1:460, vol:.24, q:.8});
+        this.tone({type:'triangle', f0:220, f1:90, dur:.08, vol:.11}); break;
+      case 'slash2':
+        this.noise({dur:.12, f0:1600, f1:380, vol:.21, q:.7});
+        this.tone({type:'triangle', f0:260, f1:110, dur:.07, vol:.10}); break;
       case 'hit':
-        this.tone({type:'triangle', f0:420, f1:140, dur:.06, vol:.13});
-        this.noise({dur:.07, f0:3200, f1:1200, vol:.24, q:1.1, flat:true});
-        this.noise({dur:.03, f0:6500, f1:4200, vol:.28, q:.7, flat:true}); break;
+        this.tone({type:'square', f0:190, f1:70, dur:.09, vol:.14});
+        this.noise({dur:.06, f0:900, vol:.1}); break;
       case 'crit':
         this.tone({type:'sawtooth', f0:320, f1:90, dur:.16, vol:.2});
         this.noise({dur:.12, f0:2200, f1:300, vol:.18});
@@ -177,18 +142,15 @@ const AudioSys = {
       case 'zImpact':
         this.noise({dur:.34, f0:700, f1:2600, vol:.22, q:1.1});
         this.tone({type:'triangle', f0:165, f1:58, dur:.3, vol:.2});
-        this.noise({dur:.15, f0:160, f1:70, vol:.18});
-        this.noise({dur:.09, f0:5600, f1:1800, vol:.16, q:.9, flat:true}); break;
+        this.noise({dur:.15, f0:160, f1:70, vol:.18}); break;
       case 'xImpact':
         this.tone({type:'sine', f0:120, f1:34, dur:.34, vol:.32});
         this.noise({dur:.3, f0:520, f1:90, vol:.26});
-        this.tone({type:'square', f0:210, f1:55, dur:.1, vol:.12});
-        this.noise({dur:.10, f0:4600, f1:1400, vol:.16, q:.9, flat:true}); break;
+        this.tone({type:'square', f0:210, f1:55, dur:.1, vol:.12}); break;
       case 'cImpact':
         this.noise({dur:.24, f0:3000, f1:220, vol:.26, q:1.5});
         this.tone({type:'sawtooth', f0:190, f1:48, dur:.2, vol:.22});
-        this.tone({type:'sine', f0:76, f1:32, dur:.32, vol:.2, delay:.04});
-        this.noise({dur:.08, f0:6200, f1:2000, vol:.14, q:1.0, flat:true}); break;
+        this.tone({type:'sine', f0:76, f1:32, dur:.32, vol:.2, delay:.04}); break;
       case 'ultcut': {
         const n = arg||0;
         const f = 3200 + Math.min(10,n) * 130;
@@ -275,79 +237,30 @@ const AudioSys = {
   }
 };
 
-/* 改版前的普攻/命中，用于 A/B 对照（参数照抄 ae8bf8f 那一版） */
-const LEGACY = {
-  'slash-old'(A){
-    A.noise({dur:.15, f0:1800, f1:460, vol:.24, q:.8});
-    A.tone({type:'triangle', f0:220, f1:90, dur:.08, vol:.11});
-  },
-  'slash2-old'(A){
-    A.noise({dur:.12, f0:1600, f1:380, vol:.21, q:.7});
-    A.tone({type:'triangle', f0:260, f1:110, dur:.07, vol:.10});
-  },
-  'hit-old'(A){
-    A.tone({type:'square', f0:190, f1:70, dur:.09, vol:.14});
-    A.noise({dur:.06, f0:900, vol:.1});
-  }
-};
-
-const AB = [
-  { id:'legacy1', k:'改前', n:'旧版普攻一刀', d:'1800→460Hz 暗噪声 + 220→90Hz 低频，手机喇叭上几乎被背景音乐吃掉。', fn: A => { LEGACY['slash-old'](A); LEGACY['hit-old'](A); } },
-  { id:'new1', k:'改后', n:'新版普攻一刀', d:'高频刃风 + 起手瞬态 + 少量 1.2kHz 以下身体，同口径电平约 +13dB。', fn: A => { A.sfx('slash'); A.sfx('hit'); } },
-  { id:'new3', k:'改后', n:'连砍三刀（二段收尾）', d:'和游戏里一样：一、二段用 slash，第三段用更重的 slash2。', fn: A => {
-      A.sfx('slash'); A.sfx('hit');
-      setTimeout(()=>{ A.sfx('slash'); A.sfx('hit'); }, 300);
-      setTimeout(()=>{ A.sfx('slash2'); A.sfx('hit'); }, 600);
-    } },
-  { id:'legacy3', k:'改前', n:'旧版连砍三刀', d:'同样的节奏，方便直接比较手感差异。', fn: A => {
-      LEGACY['slash-old'](A); LEGACY['hit-old'](A);
-      setTimeout(()=>{ LEGACY['slash-old'](A); LEGACY['hit-old'](A); }, 300);
-      setTimeout(()=>{ LEGACY['slash2-old'](A); LEGACY['hit-old'](A); }, 600);
-    } }
-];
-
 const SOUNDS = [
-  { id:'slash', name:'普攻挥砍（一二段）', en:'slash', desc:'自动锁敌普攻的前两段。高频刃风 + 起手瞬态，手机上主打 2.5–5kHz。' },
-  { id:'slash2', name:'普攻挥砍（第三段）', en:'slash2', desc:'第三段更重更长：刃风更低一档，尾部多 10ms，命中时附带 1 秒攻击加成。' },
-  { id:'hit', name:'普攻命中', en:'hit', desc:'每一刀打中敌人。420→140Hz 三角波 + 3.2kHz 脆击 + 6.5kHz 起手，短促的“啪”。' },
-  { id:'crit', name:'重击 / 连击里程碑', en:'crit', desc:'20/50/100/200 连击时播。320→90Hz 锯齿 + 高频噪声 + 1200Hz 方波点。' },
-  { id:'wave', name:'波次开始', en:'wave', desc:'关卡开场、每一波开始。D5→A5 两声纯正弦铃音 + 上扬空气声。' },
+  { id:'slash', name:'普攻挥砍（一二段）', en:'slash', desc:'自动锁敌普攻的前两段。1800→460Hz 噪声 + 220→90Hz 低频。' },
+  { id:'slash2', name:'普攻挥砍（第三段）', en:'slash2', desc:'第三段更短更轻：1600→380Hz 噪声 + 260→110Hz 低频。' },
+  { id:'hit', name:'普攻命中', en:'hit', desc:'每一刀打中敌人。190→70Hz 方波 0.09 秒 + 900Hz 噪声。' },
+  { id:'crit', name:'重击 / 连击里程碑', en:'crit', desc:'20/50/100/200 连击时播。320→90Hz 锯齿 + 高频噪声。' },
+  { id:'wave', name:'波次开始', en:'wave', desc:'关卡开场、每一波开始。D5→A5 两声正弦铃音 + 上扬空气声。' },
   { id:'boss', name:'BOSS 阶段切换', en:'boss', desc:'魔王进入二、三阶段时播。55Hz 锯齿深吼 1.4 秒 + 低频噪声。' },
-  { id:'hurt', name:'玩家受伤', en:'hurt', desc:'被敌人打到时播。260→80Hz 锯齿扫频 + 噪声，0.28 秒。' },
+  { id:'hurt', name:'玩家受伤', en:'hurt', desc:'被敌人打到时播。260→80Hz 锯齿扫频 + 噪声。' },
   { id:'jump', name:'跃起', en:'jump', desc:'X 裂地跃斩起跳。280→640Hz 正弦上滑。' },
-  { id:'land', name:'落地', en:'land', desc:'120→38Hz 正弦 + 低频噪声，厚实的“咚”。' },
+  { id:'land', name:'落地', en:'land', desc:'120→38Hz 正弦 + 低频噪声。' },
   { id:'whip', name:'裂空投 / 鞭击', en:'whip', desc:'抓投与甩击。噪声 3200→600 + 三角波。' },
   { id:'spin', name:'旋风斩', en:'spin', desc:'Z 技能。噪声 600→2400 上扬 + 三角波 200→520。' },
-  { id:'zImpact', name:'旋风斩命中', en:'zImpact', desc:'Z 技能收招的环斩。噪声 700→2600 + 165→58Hz。' },
+  { id:'zImpact', name:'旋风斩命中', en:'zImpact', desc:'Z 收招环斩。噪声 700→2600 + 165→58Hz 低频。' },
   { id:'xImpact', name:'裂地跃斩命中', en:'xImpact', desc:'X 落地砸击。120→34Hz 正弦 + 噪声。' },
   { id:'cImpact', name:'裂空投命中', en:'cImpact', desc:'C 落点砸击。噪声 3000→220 + 锯齿 190→48。' },
-  { id:'ult', name:'无影斩起手', en:'ult', desc:'V 大招触发：低频开场鼓 + 金属斩击 + 和弦余韵。' },
+  { id:'ult', name:'无影斩起手', en:'ult', desc:'V 大招：低频开场鼓 + 金属斩击 + 和弦余韵。' },
   { id:'ultcut', name:'无影斩逐斩', en:'ultcut', desc:'每一斩单独一声，音高随连斩数升高。' },
   { id:'ultFinish', name:'无影斩收尾', en:'ultFinish', desc:'最后一记剑气冲击波。' },
-  { id:'heal', name:'回血 / 过关', en:'heal', desc:'523/659/784 三个正弦音，明亮。' },
-  { id:'pickup', name:'拾取', en:'pickup', desc:'捡到补给。880→1320Hz 三角波。' },
-  { id:'death', name:'敌人死亡 / 失败', en:'death', desc:'140→32Hz 正弦 + 噪声，下沉的“呼”。' },
-  { id:'ui', name:'按钮点击', en:'ui', desc:'所有界面按钮。660→990Hz 三角波，极短。' },
-  { id:'explode', name:'爆炸 / 炸弹鬼', en:'explode', desc:'炸弹鬼自爆、BOSS 火雨。90→26Hz 正弦 + 噪声。' }
+  { id:'heal', name:'回血 / 过关', en:'heal', desc:'523/659/784 三个正弦音。' },
+  { id:'pickup', name:'拾取', en:'pickup', desc:'880→1320Hz 三角波。' },
+  { id:'death', name:'敌人死亡 / 失败', en:'death', desc:'140→32Hz 正弦 + 噪声。' },
+  { id:'ui', name:'按钮点击', en:'ui', desc:'660→990Hz 三角波，极短。' },
+  { id:'explode', name:'爆炸 / 炸弹鬼', en:'explode', desc:'90→26Hz 正弦 + 噪声。' }
 ];
-
-function blink(b){
-  document.querySelectorAll('.item.playing,.ab button.on').forEach(x=>{ x.classList.remove('playing'); x.classList.remove('on'); });
-  b.classList.add('playing');
-  setTimeout(()=> b.classList.remove('playing'), 900);
-}
-
-const ab = document.getElementById('ab');
-for(const item of AB){
-  const b = document.createElement('button');
-  b.innerHTML = `<div class="k">${item.k}</div><div class="n">${item.n}</div><div class="d">${item.d}</div>`;
-  b.addEventListener('click', ()=>{
-    AudioSys.init();
-    item.fn(AudioSys);
-    blink(b);
-  });
-  ab.appendChild(b);
-}
 
 const grid = document.getElementById('grid');
 for(const s of SOUNDS){
@@ -357,7 +270,9 @@ for(const s of SOUNDS){
   b.addEventListener('click', ()=>{
     AudioSys.init();
     AudioSys.sfx(s.id);
-    blink(b);
+    document.querySelectorAll('.item.playing').forEach(x=>x.classList.remove('playing'));
+    b.classList.add('playing');
+    setTimeout(()=> b.classList.remove('playing'), 900);
   });
   grid.appendChild(b);
 }
