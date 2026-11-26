@@ -765,6 +765,23 @@ const ARENA = { l: 46, r: W-46, t: 46, b: H-46 };
 /* =========================================================
    2. 音频（全程序化生成，无外部素材）
    ========================================================= */
+/* 生成一段正弦 beep 的 WAV data URI：给 <audio> 媒体通道用（vol=0 即无声解锁段） */
+function beepWav(freq, dur, vol){
+  const sr=8000, n=Math.max(1,Math.floor(sr*dur)), bytes=44+n*2;
+  const ab=new ArrayBuffer(bytes), dv=new DataView(ab);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF'); dv.setUint32(4,bytes-8,true); ws(8,'WAVE'); ws(12,'fmt ');
+  dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true);
+  dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true); dv.setUint16(32,2,true); dv.setUint16(34,16,true);
+  ws(36,'data'); dv.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){
+    const env=Math.min(1,i/80)*Math.min(1,(n-i)/200);
+    dv.setInt16(44+i*2, Math.round(Math.sin(2*Math.PI*freq*i/sr)*vol*env*32767), true);
+  }
+  let bin=''; const u8=new Uint8Array(ab);
+  for(let i=0;i<u8.length;i++) bin+=String.fromCharCode(u8[i]);
+  return 'data:audio/wav;base64,'+btoa(bin);
+}
 const AudioSys = {
   ctx:null, master:null, musicGain:null, sfxGain:null, muted:false,
   musicEnabled:true, sfxEnabled:true, musicVol:.65, sfxVol:.9,
@@ -773,6 +790,7 @@ const AudioSys = {
     if(this.ctx){
       // iOS 锁屏/来电/切后台后可能进入 interrupted，只恢复 suspended 会永久哑掉
       if(this.ctx.state==='suspended'||this.ctx.state==='interrupted'){ const p=this.ctx.resume(); if(p&&p.catch)p.catch(()=>{}); }
+      this.unlockMedia();
       return;
     }
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -794,8 +812,21 @@ const AudioSys = {
       unlock.connect(this.ctx.destination);
       if(unlock.start) unlock.start(0);
       if(this.ctx.state==='suspended'||this.ctx.state==='interrupted'){ const p=this.ctx.resume(); if(p&&p.catch)p.catch(()=>{}); }
+      this.unlockMedia();
       this.startMusic();
     }catch(err){ this.ctx = null; }
+  },
+  unlockMedia(){
+    // 部分手机把 WebAudio 归到铃声/听筒通道，静音模式下整条被系统静音；
+    // 用 <audio> 播一段无声 WAV，把网页音频会话拉进媒体通道（HTML5 音频库的通用解锁法）
+    try{
+      if(!this._mediaUnlock){
+        this._mediaUnlock = new Audio(beepWav(440, 0.05, 0));
+        this._mediaUnlock.setAttribute('playsinline','');
+        this._mediaUnlock.preload='auto';
+      }
+      const p=this._mediaUnlock.play(); if(p&&p.catch)p.catch(()=>{});
+    }catch(_){}
   },
   updateBuses(){
     if(!this.ctx) return;
@@ -4451,7 +4482,7 @@ function buildLevelGrid(){
     if(!locked)card.onclick=()=>{AudioSys.init();AudioSys.sfx('ui');startLevel(i,{mode:'practice'});};grid.appendChild(card);
   });
 }
-const BUILD = '2026-11-26.5';
+const BUILD = '2026-11-26.6';
 function refreshBuildTag(){
   const tag = el('buildTag'); if(!tag) return;
   let audio = '未初始化';
@@ -4602,7 +4633,9 @@ el('btnAudioTest').addEventListener('click',()=>{
   AudioSys.init();
   const c=AudioSys.ctx;
   if(!c){ el('saveNotice').textContent='AudioContext 创建失败：此浏览器不支持或拒绝了音频'; return; }
-  // 三段定位：①绕过音效支路直连总线 ②走音效支路 ③普攻合成音，哪段哑就知道哪里断
+  const t0=c.currentTime;
+  // 四段定位：①绕过音效支路直连总线 ②走音效支路 ③普攻合成音 ④<audio>媒体通道
+  // ①②③全哑而④响 = 系统把 WebAudio 通道静音/改道；①响②哑 = 支路问题；①②响③哑 = 合成问题
   const beep=(dest,delay)=>{
     const t=c.currentTime+delay, o=c.createOscillator(), g=c.createGain();
     o.type='sine'; o.frequency.value=880;
@@ -4614,11 +4647,14 @@ el('btnAudioTest').addEventListener('click',()=>{
   beep(AudioSys.master, 0.05);
   beep(AudioSys.sfxGain, 0.65);
   setTimeout(()=> AudioSys.sfx('slash'), 1250);
+  setTimeout(()=>{ try{ const a=new Audio(beepWav(880,0.45,0.5)); a.setAttribute('playsinline',''); a.play().catch(()=>{}); }catch(_){} }, 1900);
   setTimeout(()=>{
     const g=AudioSys.sfxGain?AudioSys.sfxGain.gain.value.toFixed(2):'-';
-    el('saveNotice').textContent='①直连 ②支路 ③普攻，听到了哪几声？｜状态 '+c.state+' · 音效开关 '+(AudioSys.sfxEnabled?'开':'关')+' · 支路增益 '+g+' · 音量 '+Math.round(AudioSys.sfxVol*100)+'%';
+    const mg=AudioSys.master?AudioSys.master.gain.value.toFixed(2):'-';
+    const dt=(c.currentTime-t0).toFixed(2);
+    el('saveNotice').textContent='①直连 ②支路 ③普攻 ④媒体通道，听到了哪几声？｜状态 '+c.state+' · 时钟+'+dt+'s · 总增益 '+mg+' · 支路 '+g+' · 音效开关 '+(AudioSys.sfxEnabled?'开':'关');
     refreshBuildTag();
-  }, 1600);
+  }, 2600);
 });
 el('btnForceUpdate').addEventListener('click',()=>{
   const u = new URL(location.href);
