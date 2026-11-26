@@ -37,8 +37,8 @@
 <h1>音效<span>试听</span> · 单独回放</h1>
 <p class="sub">每个按钮只播这一条音效。本页参数与 <code>stickman.html</code> 里的 <code>AudioSys</code> 保持一致，改游戏音效后这里要同步。</p>
 <div class="note">
-  <b>当前音色：</b>普攻与命中已还原成原来那版（普攻 1800→460Hz 暗刃风 + 220→90Hz 低频，命中 190→70Hz 方波），你确认过的那套听感。
-  底层只保留了不影响音色的音频解锁（pointerdown / touchend / click 三处 + 一个静音采样解锁）；噪声生成、包络与音量都与旧版一致。
+  <b>当前音色：</b>普攻、命中与 Z/X/C 命中保留你确认过的原版低频主体，另叠一层很轻的高频瞬态（3–7kHz），
+  解决手机小喇叭对低频滚降导致的外放听不到；电脑端听感基本不变。底层含音频解锁与 iOS interrupted 状态恢复。
 </div>
 <div class="tools">
   <button class="pill" id="btnMusic">循环背景音乐（对照）</button>
@@ -56,7 +56,7 @@ const AudioSys = {
   musicOn:false, timer:null, step:0, nextT:0,
   init(){
     if(this.ctx){
-      if(this.ctx.state==='suspended'){ const p=this.ctx.resume(); if(p&&p.catch)p.catch(()=>{}); }
+      if(this.ctx.state==='suspended'||this.ctx.state==='interrupted'){ const p=this.ctx.resume(); if(p&&p.catch)p.catch(()=>{}); }
       return;
     }
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -76,7 +76,7 @@ const AudioSys = {
       unlock.buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
       unlock.connect(this.ctx.destination);
       if(unlock.start) unlock.start(0);
-      if(this.ctx.state==='suspended'){ const p=this.ctx.resume(); if(p&&p.catch)p.catch(()=>{}); }
+      if(this.ctx.state==='suspended'||this.ctx.state==='interrupted'){ const p=this.ctx.resume(); if(p&&p.catch)p.catch(()=>{}); }
     }catch(err){ this.ctx = null; }
   },
   setMuted(m){
@@ -98,28 +98,39 @@ const AudioSys = {
     osc.connect(g); g.connect(o.music?this.musicGain:this.sfxGain);
     osc.start(t); osc.stop(t+(o.dur||0.1)+0.03);
   },
+  noiseBuf(dur, flat){
+    const c=this.ctx, key=dur.toFixed(3)+(flat?'f':'d')+c.sampleRate;
+    this._nbuf = this._nbuf || Object.create(null);
+    let buf = this._nbuf[key];
+    if(!buf){
+      const len = Math.max(1, Math.floor(c.sampleRate * dur));
+      buf = c.createBuffer(1, len, c.sampleRate);
+      const d = buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * (flat ? 1 : (1 - i/len));
+      this._nbuf[key] = buf;
+    }
+    return buf;
+  },
   noise(o){
     if(!this.ctx || this.muted) return;
     if(o.music ? !this.musicEnabled : !this.sfxEnabled) return;
-    const c=this.ctx, t=c.currentTime + (o.delay||0);
-    const len = Math.floor(c.sampleRate * (o.dur||0.15));
-    const buf = c.createBuffer(1, len, c.sampleRate);
-    const d = buf.getChannelData(0);
-    for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * (1 - i/len);
-    const src = c.createBufferSource(); src.buffer = buf;
+    const c=this.ctx, t=c.currentTime + (o.delay||0), dur=o.dur||0.15;
+    const src = c.createBufferSource(); src.buffer = this.noiseBuf(dur, !!o.flat);
     const f = c.createBiquadFilter(); f.type = o.filter||'bandpass';
     f.frequency.setValueAtTime(o.f0||1200, t);
-    if(o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t+(o.dur||0.15));
+    if(o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t+dur);
     f.Q.value = o.q||1;
     const g = c.createGain();
-    g.gain.setValueAtTime(o.vol||0.2, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t+(o.dur||0.15));
+    const v = o.vol==null?0.2:o.vol;
+    g.gain.setValueAtTime(v, t);
+    if(o.tail) g.gain.setValueAtTime(v, t+Math.min(o.tail, dur*0.7));
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
     src.connect(f); f.connect(g); g.connect(o.music?this.musicGain:this.sfxGain);
     src.start(t);
   },
   sfx(name, arg){
     if(!this.ctx || !this.sfxEnabled) return;
-    if(this.ctx.state==='suspended'){ const p=this.ctx.resume(); if(p&&p.catch)p.catch(()=>{}); }
+    if(this.ctx.state==='suspended'||this.ctx.state==='interrupted'){ const p=this.ctx.resume(); if(p&&p.catch)p.catch(()=>{}); }
     const now = this.ctx.currentTime;
     if(name==='hit'||name==='crit'){
       if(now - (this.lastHitAt||-9) < 0.03) return;
@@ -128,13 +139,18 @@ const AudioSys = {
     switch(name){
       case 'slash':
         this.noise({dur:.15, f0:1800, f1:460, vol:.24, q:.8});
-        this.tone({type:'triangle', f0:220, f1:90, dur:.08, vol:.11}); break;
+        this.tone({type:'triangle', f0:220, f1:90, dur:.08, vol:.11});
+        this.noise({dur:.12, f0:3600, f1:1400, vol:.1, q:.9, flat:true, tail:.04});
+        this.noise({dur:.06, f0:6800, f1:2800, vol:.16, q:.6, flat:true}); break;
       case 'slash2':
         this.noise({dur:.12, f0:1600, f1:380, vol:.21, q:.7});
-        this.tone({type:'triangle', f0:260, f1:110, dur:.07, vol:.10}); break;
+        this.tone({type:'triangle', f0:260, f1:110, dur:.07, vol:.10});
+        this.noise({dur:.1, f0:3200, f1:1200, vol:.09, q:.9, flat:true, tail:.04});
+        this.noise({dur:.055, f0:6200, f1:2500, vol:.15, q:.6, flat:true}); break;
       case 'hit':
         this.tone({type:'square', f0:190, f1:70, dur:.09, vol:.14});
-        this.noise({dur:.06, f0:900, vol:.1}); break;
+        this.noise({dur:.06, f0:900, vol:.1});
+        this.noise({dur:.05, f0:5200, f1:2200, vol:.2, q:.7, flat:true}); break;
       case 'crit':
         this.tone({type:'sawtooth', f0:320, f1:90, dur:.16, vol:.2});
         this.noise({dur:.12, f0:2200, f1:300, vol:.18});
@@ -142,15 +158,18 @@ const AudioSys = {
       case 'zImpact':
         this.noise({dur:.34, f0:700, f1:2600, vol:.22, q:1.1});
         this.tone({type:'triangle', f0:165, f1:58, dur:.3, vol:.2});
-        this.noise({dur:.15, f0:160, f1:70, vol:.18}); break;
+        this.noise({dur:.15, f0:160, f1:70, vol:.18});
+        this.noise({dur:.09, f0:5600, f1:1800, vol:.16, q:.9, flat:true}); break;
       case 'xImpact':
         this.tone({type:'sine', f0:120, f1:34, dur:.34, vol:.32});
         this.noise({dur:.3, f0:520, f1:90, vol:.26});
-        this.tone({type:'square', f0:210, f1:55, dur:.1, vol:.12}); break;
+        this.tone({type:'square', f0:210, f1:55, dur:.1, vol:.12});
+        this.noise({dur:.1, f0:4600, f1:1400, vol:.16, q:.9, flat:true}); break;
       case 'cImpact':
         this.noise({dur:.24, f0:3000, f1:220, vol:.26, q:1.5});
         this.tone({type:'sawtooth', f0:190, f1:48, dur:.2, vol:.22});
-        this.tone({type:'sine', f0:76, f1:32, dur:.32, vol:.2, delay:.04}); break;
+        this.tone({type:'sine', f0:76, f1:32, dur:.32, vol:.2, delay:.04});
+        this.noise({dur:.08, f0:6200, f1:2000, vol:.14, q:1.0, flat:true}); break;
       case 'ultcut': {
         const n = arg||0;
         const f = 3200 + Math.min(10,n) * 130;
@@ -238,9 +257,9 @@ const AudioSys = {
 };
 
 const SOUNDS = [
-  { id:'slash', name:'普攻挥砍（一二段）', en:'slash', desc:'自动锁敌普攻的前两段。1800→460Hz 噪声 + 220→90Hz 低频。' },
-  { id:'slash2', name:'普攻挥砍（第三段）', en:'slash2', desc:'第三段更短更轻：1600→380Hz 噪声 + 260→110Hz 低频。' },
-  { id:'hit', name:'普攻命中', en:'hit', desc:'每一刀打中敌人。190→70Hz 方波 0.09 秒 + 900Hz 噪声。' },
+  { id:'slash', name:'普攻挥砍（一二段）', en:'slash', desc:'自动锁敌普攻的前两段。1800→460Hz 噪声 + 220→90Hz 低频 + 高频刃风瞬态。' },
+  { id:'slash2', name:'普攻挥砍（第三段）', en:'slash2', desc:'第三段更短更轻：1600→380Hz 噪声 + 260→110Hz 低频 + 高频瞬态。' },
+  { id:'hit', name:'普攻命中', en:'hit', desc:'每一刀打中敌人。190→70Hz 方波 0.09 秒 + 900Hz 噪声 + 5kHz 脆裂。' },
   { id:'crit', name:'重击 / 连击里程碑', en:'crit', desc:'20/50/100/200 连击时播。320→90Hz 锯齿 + 高频噪声。' },
   { id:'wave', name:'波次开始', en:'wave', desc:'关卡开场、每一波开始。D5→A5 两声正弦铃音 + 上扬空气声。' },
   { id:'boss', name:'BOSS 阶段切换', en:'boss', desc:'魔王进入二、三阶段时播。55Hz 锯齿深吼 1.4 秒 + 低频噪声。' },
@@ -249,9 +268,9 @@ const SOUNDS = [
   { id:'land', name:'落地', en:'land', desc:'120→38Hz 正弦 + 低频噪声。' },
   { id:'whip', name:'裂空投 / 鞭击', en:'whip', desc:'抓投与甩击。噪声 3200→600 + 三角波。' },
   { id:'spin', name:'旋风斩', en:'spin', desc:'Z 技能。噪声 600→2400 上扬 + 三角波 200→520。' },
-  { id:'zImpact', name:'旋风斩命中', en:'zImpact', desc:'Z 收招环斩。噪声 700→2600 + 165→58Hz 低频。' },
-  { id:'xImpact', name:'裂地跃斩命中', en:'xImpact', desc:'X 落地砸击。120→34Hz 正弦 + 噪声。' },
-  { id:'cImpact', name:'裂空投命中', en:'cImpact', desc:'C 落点砸击。噪声 3000→220 + 锯齿 190→48。' },
+  { id:'zImpact', name:'旋风斩命中', en:'zImpact', desc:'Z 收招环斩。噪声 700→2600 + 165→58Hz 低频 + 高频脆裂。' },
+  { id:'xImpact', name:'裂地跃斩命中', en:'xImpact', desc:'X 落地砸击。120→34Hz 正弦 + 噪声 + 高频脆裂。' },
+  { id:'cImpact', name:'裂空投命中', en:'cImpact', desc:'C 落点砸击。噪声 3000→220 + 锯齿 190→48 + 高频脆裂。' },
   { id:'ult', name:'无影斩起手', en:'ult', desc:'V 大招：低频开场鼓 + 金属斩击 + 和弦余韵。' },
   { id:'ultcut', name:'无影斩逐斩', en:'ultcut', desc:'每一斩单独一声，音高随连斩数升高。' },
   { id:'ultFinish', name:'无影斩收尾', en:'ultFinish', desc:'最后一记剑气冲击波。' },
